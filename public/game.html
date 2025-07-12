@@ -676,6 +676,81 @@
           </form>
         </div>
       </div>
+      <div
+        id="winnerOverlay"
+        style="
+          display: none;
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100vw;
+          height: 100vh;
+          background: rgba(255, 255, 255, 0.95);
+          z-index: 99999;
+          justify-content: center;
+          align-items: center;
+          flex-direction: column;
+        "
+      >
+        <canvas
+          id="confettiCanvas"
+          style="
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+          "
+        ></canvas>
+        <div style="position: relative; z-index: 2; text-align: center">
+          <h1
+            id="winnerMessage"
+            style="
+              font-size: 3rem;
+              margin-bottom: 1rem;
+              color: #2196f3;
+              text-shadow: 0 2px 16px #7db6e8, 0 0 8px #fff;
+            "
+          >
+            Winner!
+          </h1>
+          <button
+            onclick="window.location.href='index.html'"
+            style="
+              font-size: 1.2rem;
+              padding: 12px 32px;
+              border-radius: 8px;
+              background: #7db6e8;
+              color: #fff;
+              border: none;
+              margin-top: 2rem;
+              margin-right: 1rem;
+              box-shadow: 0 2px 8px #2196f3;
+              cursor: pointer;
+            "
+          >
+            Return to Homepage
+          </button>
+          <button
+            onclick="restartGame()"
+            style="
+              font-size: 1.2rem;
+              padding: 12px 32px;
+              border-radius: 8px;
+              background: #4caf50;
+              color: #fff;
+              border: none;
+              margin-top: 2rem;
+              margin-left: 1rem;
+              box-shadow: 0 2px 8px #4caf50;
+              cursor: pointer;
+            "
+          >
+            Another Round
+          </button>
+        </div>
+      </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
@@ -697,6 +772,7 @@
       let isPlaying = false;
       let gameStarted = false;
       let gameDirection = 1; // 1 for clockwise, -1 for counterclockwise
+      let restarting = false;
 
       // Track AI card counts
       let aiCardCounts = { ai_1: 7, ai_2: 7, ai_3: 7 };
@@ -709,6 +785,28 @@
       socket.emit("joinGame", roomId, currentMode, currentDifficulty);
 
       socket.on("startGame", (data) => {
+        if (restarting) {
+          // Hide the winner overlay and reset state only on actual new game
+          document.getElementById("winnerOverlay").style.display = "none";
+          // Reset game state
+          hand = [];
+          pileCard = null;
+          hintRemaining = 5;
+          currentTurn = 0;
+          aiPlayers = [];
+          isMyTurn = false;
+          isPlaying = false;
+          gameStarted = false;
+          gameDirection = 1;
+          aiCardCounts = { ai_1: 7, ai_2: 7, ai_3: 7 };
+          aiNames = [];
+          // Clear the action log
+          document.getElementById("actionLog").innerHTML = "";
+          // Re-enable buttons
+          document.getElementById("drawButton").disabled = false;
+          document.getElementById("hintButton").disabled = false;
+          restarting = false;
+        }
         console.log("Game started:", data);
         hand = data.hand;
         pileCard = data.pileCard;
@@ -805,32 +903,24 @@
             }
             message = `${aiName} played ${data.card.symbol} (CHANGE to ${changeText}!)`;
             showSpeechBubble(aiIndex + 1, `🪄${changeText}🪄`);
+            addLogEntry(message, "ai");
             addLogEntry(`${aiName}: "🪄${changeText}🪄"`, "ai-phrase");
           } else if (data.card.isPlusTwo) {
             message = `${aiName} played ${data.card.symbol} (+2!)`;
+            addLogEntry(message, "ai");
           } else if (data.isReverse) {
             message = `${aiName} played ${data.card.symbol} (REVERSE!)`;
+            addLogEntry(message, "ai");
           } else {
             message = `${aiName} played ${data.card.symbol}`;
+            addLogEntry(message, "ai");
           }
-          addLogEntry(message, "ai");
-
           // Update AI card count
           aiCardCounts[data.playerId]--;
           console.log(
             `Updated ${data.playerId} card count to:`,
             aiCardCounts[data.playerId]
           );
-
-          // Show AI change card phrase in speech bubble
-          if (data.card.isChange) {
-            const changeText =
-              currentMode === "consonant"
-                ? `${data.card.place}, ${data.card.manner}`
-                : `${data.card.height}, ${data.card.backness}`;
-            showSpeechBubble(aiIndex + 1, `🪄${changeText}🪄`);
-            addLogEntry(`${aiName}: "🪄${changeText}🪄"`, "ai-phrase");
-          }
         }
 
         currentTurn = data.turn;
@@ -923,14 +1013,95 @@
       });
 
       socket.on("gameOver", (data) => {
-        const winner = data.winner === socket.id ? "You" : `AI ${data.winner}`;
+        let winner;
+        if (data.winner === socket.id) {
+          winner = "You";
+        } else {
+          // Extract AI index and get the actual name
+          const aiIndex = parseInt(data.winner.split("_")[1]) - 1;
+          winner = aiNames[aiIndex] || "Wug";
+        }
         addLogEntry(`Game Over! ${winner} won!`, "system");
-        document.getElementById(
-          "gameStatus"
-        ).textContent = `Game Over! ${winner} won!`;
         document.getElementById("drawButton").disabled = true;
         document.getElementById("hintButton").disabled = true;
+        // Show fancy winner overlay
+        showWinnerOverlay(winner);
       });
+
+      function showWinnerOverlay(winner) {
+        const overlay = document.getElementById("winnerOverlay");
+        const message = document.getElementById("winnerMessage");
+        if (winner === "You") {
+          message.textContent = "You won! 🎉";
+        } else {
+          message.textContent = winner + " wins! 🎉";
+        }
+        overlay.style.display = "flex";
+        startConfetti();
+      }
+      // Hide overlay on reload or new game
+      window.addEventListener("beforeunload", () => {
+        document.getElementById("winnerOverlay").style.display = "none";
+      });
+      socket.on("startGame", () => {
+        document.getElementById("winnerOverlay").style.display = "none";
+      });
+      // Simple confetti animation
+      function startConfetti() {
+        const canvas = document.getElementById("confettiCanvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        let confetti = [];
+        for (let i = 0; i < 120; i++) {
+          confetti.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * -canvas.height,
+            r: 6 + Math.random() * 10,
+            d: 2 + Math.random() * 4,
+            color: `hsl(${Math.random() * 360}, 80%, 60%)`,
+            tilt: Math.random() * 10 - 5,
+            tiltAngle: Math.random() * Math.PI * 2,
+          });
+        }
+        let animationFrame;
+        function draw() {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          confetti.forEach((c) => {
+            ctx.beginPath();
+            ctx.ellipse(c.x, c.y, c.r, c.r / 2, c.tiltAngle, 0, 2 * Math.PI);
+            ctx.fillStyle = c.color;
+            ctx.fill();
+          });
+        }
+        function update() {
+          confetti.forEach((c) => {
+            c.y += c.d;
+            c.x += Math.sin(c.tiltAngle) * 2;
+            c.tiltAngle += 0.05 + Math.random() * 0.02;
+            if (c.y > canvas.height) {
+              c.y = -10;
+              c.x = Math.random() * canvas.width;
+            }
+          });
+        }
+        function loop() {
+          draw();
+          update();
+          animationFrame = requestAnimationFrame(loop);
+        }
+        loop();
+        // Stop confetti after 7 seconds
+        setTimeout(() => {
+          cancelAnimationFrame(animationFrame);
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }, 7000);
+      }
+
+      function restartGame() {
+        restarting = true;
+        socket.emit("joinGame", roomId, currentMode, currentDifficulty);
+      }
 
       socket.on("error", (data) => {
         addLogEntry(`Error: ${data.message}`, "error");
@@ -983,7 +1154,14 @@
           const div = document.createElement("div");
           div.className = "card";
           div.innerHTML = `<div>${card.symbol}</div>`;
-          if (currentDifficulty === "easy") {
+          // Only show label for regular cards in easy mode
+          if (
+            currentDifficulty === "easy" &&
+            !card.isPlusTwo &&
+            !card.isPlusFour &&
+            !card.isReverse &&
+            !card.isChange
+          ) {
             div.innerHTML += `<span class="card-label">${
               currentMode === "consonant"
                 ? card.place + ", " + card.manner
@@ -1060,8 +1238,14 @@
           } else {
             div.innerHTML = `<div>${pileCard.symbol}</div>`;
           }
-
-          if (currentDifficulty === "easy") {
+          // Only show label for regular cards in easy mode
+          if (
+            currentDifficulty === "easy" &&
+            !pileCard.isPlusTwo &&
+            !pileCard.isPlusFour &&
+            !pileCard.isReverse &&
+            !pileCard.isChange
+          ) {
             div.innerHTML += `<span class="card-label">${
               currentMode === "consonant"
                 ? pileCard.place + ", " + pileCard.manner
