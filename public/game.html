@@ -61,6 +61,12 @@
         left: 50%;
         transform: translate(-50%, -50%);
         z-index: 5;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 120px;
+        height: 160px;
+        /* Ensures enough space for the card to be centered */
       }
 
       .card {
@@ -78,6 +84,31 @@
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
       }
 
+      .pile-card {
+        margin: 0 auto;
+        box-shadow: 0 0 0 6px #7db6e8, 0 8px 32px 0 rgba(33, 150, 243, 0.45),
+          0 2px 16px 0 rgba(0, 0, 0, 0.25);
+        z-index: 10;
+        position: relative;
+        animation: pop-pile-card 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        text-align: center;
+      }
+
+      @keyframes pop-pile-card {
+        0% {
+          transform: scale(0.7);
+          opacity: 0.5;
+        }
+        80% {
+          transform: scale(1.1);
+          opacity: 1;
+        }
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+
       .card:hover {
         transform: translateY(-5px);
         box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
@@ -87,6 +118,7 @@
         display: block;
         font-size: 0.7rem;
         margin-top: 5px;
+        text-align: center;
       }
 
       .hint {
@@ -257,6 +289,153 @@
         background: #ffebee;
         color: #c62828;
       }
+
+      .log-entry.ai-phrase {
+        background: #e8f5e8;
+        color: #2e7d32;
+        font-style: italic;
+        border-left: 3px solid #4caf50;
+      }
+
+      /* Speech Bubble Styles */
+      .speech-bubble {
+        position: absolute;
+        background: white;
+        border: 2px solid #7db6e8;
+        border-radius: 15px;
+        padding: 8px 12px;
+        font-size: 0.95rem;
+        font-family: "Quicksand", "Nunito", "Baloo", "Comic Sans MS",
+          "Comic Sans", "Chalkboard", "cursive", sans-serif;
+        min-width: 120px;
+        max-width: min(90vw, 260px);
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        z-index: 100;
+        opacity: 0;
+        transform: scale(0.8);
+        transition: all 0.3s ease;
+        pointer-events: none;
+        text-align: center;
+      }
+
+      .speech-bubble.show {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      /* AI1 and AI3: bubble above, arrow at bottom */
+      .speech-bubble.ai-1,
+      .speech-bubble.ai-3 {
+        left: 50%;
+        bottom: calc(
+          100% + 48px
+        ); /* move bubble further up to avoid pile card */
+        transform: translateX(-50%) scale(0.8);
+      }
+      .speech-bubble.ai-1.show,
+      .speech-bubble.ai-3.show {
+        transform: translateX(-50%) scale(1);
+      }
+      .speech-bubble.ai-1::after,
+      .speech-bubble.ai-3::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        bottom: -8px;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        border-top: 8px solid #7db6e8;
+      }
+      .speech-bubble.ai-1::before,
+      .speech-bubble.ai-3::before {
+        content: "";
+        position: absolute;
+        left: 50%;
+        bottom: -6px;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 6px solid transparent;
+        border-right: 6px solid transparent;
+        border-top: 6px solid white;
+      }
+
+      /* AI2: bubble below, arrow at top */
+      .speech-bubble.ai-2 {
+        left: 50%;
+        top: calc(
+          100% + 48px
+        ); /* move bubble further down to avoid pile card */
+        transform: translateX(-50%) scale(0.8);
+      }
+      .speech-bubble.ai-2.show {
+        transform: translateX(-50%) scale(1);
+      }
+      .speech-bubble.ai-2::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: -8px;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        border-bottom: 8px solid #7db6e8;
+      }
+      .speech-bubble.ai-2::before {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: -6px;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 6px solid transparent;
+        border-right: 6px solid transparent;
+        border-bottom: 6px solid white;
+      }
+
+      /* AI3: bubble above, anchored to right, arrow at bottom right */
+      .speech-bubble.ai-3 {
+        left: auto;
+        right: 0;
+        bottom: calc(100% + 12px);
+        transform: none;
+        max-width: min(90vw, 260px);
+        text-align: center;
+      }
+      .speech-bubble.ai-3.show {
+        transform: none;
+      }
+      .speech-bubble.ai-3::after {
+        content: "";
+        position: absolute;
+        right: 24px;
+        bottom: -8px;
+        width: 0;
+        height: 0;
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        border-top: 8px solid #7db6e8;
+      }
+      .speech-bubble.ai-3::before {
+        content: "";
+        position: absolute;
+        right: 26px;
+        bottom: -6px;
+        width: 0;
+        height: 0;
+        border-left: 6px solid transparent;
+        border-right: 6px solid transparent;
+        border-top: 6px solid white;
+      }
+
       /* Ensure highlight always applies */
       .ai-player.ai-1.active,
       .ai-player.ai-2.active,
@@ -265,35 +444,43 @@
         background: rgba(125, 182, 232, 0.15) !important;
         box-shadow: 0 0 15px rgba(125, 182, 232, 0.3) !important;
       }
+      button.highlight-draw {
+        background: #ffeb3b !important;
+        color: #333 !important;
+        border: 2px solid #fbc02d !important;
+        animation: pulse-draw 1s infinite alternate;
+      }
+      @keyframes pulse-draw {
+        0% {
+          box-shadow: 0 0 0 0 #fbc02d;
+        }
+        100% {
+          box-shadow: 0 0 12px 4px #ffe082;
+        }
+      }
     </style>
   </head>
   <body>
     <div class="game-container">
-      <div
-        id="turnIndicator"
-        style="
-          margin: 0 auto;
-          width: fit-content;
-          font-weight: bold;
-          font-size: 1.2rem;
-        "
-      ></div>
       <div class="game-board">
         <!-- Center Pile -->
         <div class="pile-center" id="pile"></div>
 
         <!-- AI Players -->
         <div class="ai-player ai-1" id="ai1">
+          <div class="speech-bubble ai-1" id="speechBubble1"></div>
           <h3>AI 1</h3>
           <div class="ai-cards" id="ai1Cards"></div>
         </div>
 
         <div class="ai-player ai-2" id="ai2">
+          <div class="speech-bubble ai-2" id="speechBubble2"></div>
           <h3>AI 2</h3>
           <div class="ai-cards" id="ai2Cards"></div>
         </div>
 
         <div class="ai-player ai-3" id="ai3">
+          <div class="speech-bubble ai-3" id="speechBubble3"></div>
           <h3>AI 3</h3>
           <div class="ai-cards" id="ai3Cards"></div>
         </div>
@@ -321,6 +508,7 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="ipa-deck.js"></script>
     <script src="ai-names.js"></script>
+    <script src="wug-phrases.js"></script>
     <script>
       const socket = io();
       const urlParams = new URLSearchParams(window.location.search);
@@ -363,14 +551,37 @@
             .sort(() => 0.5 - Math.random());
           aiNames = [shuffled[0], shuffled[1], shuffled[2]];
         } else {
-          aiNames = ["Wug", "Another wug", "A third wug"];
+          aiNames = ["Bibi", "Sass", "Mimi"];
         }
         render();
         updateTurnIndicator();
         addLogEntry(
-          "Game started! You are playing against 3 AI opponents.",
+          "Game started! You are playing against 3 wugs 🐤.",
           "system"
         );
+      });
+
+      socket.on("aiThinking", (data) => {
+        console.log("AI thinking:", data);
+
+        // Handle AI phrase during thinking phase
+        if (data.phrase) {
+          const phrase = getAIPlayPhrase(
+            data.phrase.wugKey,
+            data.phrase.card,
+            data.phrase.mode
+          );
+          if (phrase) {
+            const aiIndex = parseInt(data.playerId.split("_")[1]) - 1;
+            const aiName = aiNames[aiIndex] || "Wug";
+
+            // Show speech bubble
+            showSpeechBubble(aiIndex + 1, phrase);
+
+            // Also add to log
+            addLogEntry(`${aiName}: "${phrase}"`, "ai-phrase");
+          }
+        }
       });
 
       socket.on("cardPlayed", (data) => {
@@ -380,7 +591,10 @@
         if (data.playerId === socket.id) {
           addLogEntry(`You played ${data.card.symbol}`, "player");
         } else {
-          addLogEntry(`AI ${data.playerId} played ${data.card.symbol}`, "ai");
+          const aiIndex = parseInt(data.playerId.split("_")[1]) - 1;
+          const aiName = aiNames[aiIndex] || "Wug";
+          addLogEntry(`${aiName} played ${data.card.symbol}`, "ai");
+
           // Update AI card count
           aiCardCounts[data.playerId]--;
           console.log(
@@ -402,7 +616,9 @@
         if (data.playerId === socket.id) {
           addLogEntry("You drew a card", "player");
         } else {
-          addLogEntry(`AI ${data.playerId} drew a card`, "ai");
+          const aiIndex = parseInt(data.playerId.split("_")[1]) - 1;
+          const aiName = aiNames[aiIndex] || "Wug";
+          addLogEntry(`${aiName} drew a card`, "ai");
           // Update AI card count
           aiCardCounts[data.playerId]++;
         }
@@ -476,8 +692,9 @@
         const hintMessage = document.getElementById("hintMessage");
         const hintCount = document.getElementById("hintCount");
         handDiv.innerHTML = "";
-        hintMessage.textContent = "";
+        if (hintMessage) hintMessage.textContent = "";
         let anyHints = false;
+        let hasPlayable = false;
 
         if (hand.length === 0) {
           const loadingDiv = document.createElement("div");
@@ -497,6 +714,9 @@
                 : card.height + ", " + card.backness
             }</span>`;
           }
+          if (isMatch(card, pileCard)) {
+            hasPlayable = true;
+          }
           if (showHints && isMatch(card, pileCard)) {
             div.classList.add("hint");
             anyHints = true;
@@ -507,10 +727,17 @@
           handDiv.appendChild(div);
         });
 
+        const drawButton = document.getElementById("drawButton");
         if (showHints && !anyHints) {
-          hintMessage.textContent = "No playable cards. Please draw a new one.";
+          if (hintMessage)
+            hintMessage.textContent =
+              "No playable cards. Please draw a new one.";
+          drawButton.classList.add("highlight-draw");
+          addLogEntry("No playable card, draw a new card!", "system");
+        } else {
+          drawButton.classList.remove("highlight-draw");
         }
-        hintCount.textContent = hintRemaining;
+        if (hintCount) hintCount.textContent = hintRemaining;
       }
 
       function renderPile() {
@@ -519,7 +746,7 @@
 
         if (pileCard) {
           const div = document.createElement("div");
-          div.className = "card";
+          div.className = "card pile-card";
           div.innerHTML = `<div>${pileCard.symbol}</div>`;
           if (currentDifficulty === "easy") {
             div.innerHTML += `<span class="card-label">${
@@ -544,7 +771,7 @@
           // No question mark, just the Wug image
           ai1Cards.appendChild(cardDiv);
         }
-        ai1.querySelector("h3").textContent = aiNames[0] || "Wug";
+        ai1.querySelector("h3").textContent = aiNames[0] || "Bibi";
         // Update AI 2 (top)
         const ai2 = document.getElementById("ai2");
         const ai2Cards = document.getElementById("ai2Cards");
@@ -555,7 +782,7 @@
           // No question mark, just the Wug image
           ai2Cards.appendChild(cardDiv);
         }
-        ai2.querySelector("h3").textContent = aiNames[1] || "Another wug";
+        ai2.querySelector("h3").textContent = aiNames[1] || "Sass";
         // Update AI 3 (right)
         const ai3 = document.getElementById("ai3");
         const ai3Cards = document.getElementById("ai3Cards");
@@ -566,7 +793,7 @@
           // No question mark, just the Wug image
           ai3Cards.appendChild(cardDiv);
         }
-        ai3.querySelector("h3").textContent = aiNames[2] || "A third wug";
+        ai3.querySelector("h3").textContent = aiNames[2] || "Mimi";
         // Update active states
         ai1.className = "ai-player ai-1" + (currentTurn === 1 ? " active" : "");
         ai2.className = "ai-player ai-2" + (currentTurn === 2 ? " active" : "");
@@ -586,17 +813,7 @@
       }
 
       function updateTurnIndicator() {
-        const turnIndicator = document.getElementById("turnIndicator");
-        if (isMyTurn) {
-          turnIndicator.textContent = "Your turn!";
-          turnIndicator.style.background = "#d4edda";
-          turnIndicator.style.borderColor = "#c3e6cb";
-        } else {
-          const aiIndex = currentTurn - 1;
-          turnIndicator.textContent = `AI ${aiIndex + 1}'s turn...`;
-          turnIndicator.style.background = "#fff3cd";
-          turnIndicator.style.borderColor = "#ffeaa7";
-        }
+        // No-op: turn indicator has been removed from the UI
       }
 
       function addLogEntry(message, type) {
@@ -606,6 +823,19 @@
         entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
         logDiv.appendChild(entry);
         logDiv.scrollTop = logDiv.scrollHeight;
+      }
+
+      function showSpeechBubble(aiNumber, message) {
+        const bubble = document.getElementById(`speechBubble${aiNumber}`);
+        if (bubble) {
+          bubble.textContent = message;
+          bubble.classList.add("show");
+
+          // Hide the bubble after 5 seconds (longer since game is much slower)
+          setTimeout(() => {
+            bubble.classList.remove("show");
+          }, 5000);
+        }
       }
 
       function playCard(index) {
@@ -646,7 +876,8 @@
           "hintButton"
         ).textContent = `Hint (${hintRemaining} left)`;
         addLogEntry("You used a hint", "player");
-        render();
+        // Do not disable drawButton after hint
+        render(true);
       }
 
       function isMatch(card, pileCard) {

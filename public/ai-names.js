@@ -1,6 +1,6 @@
 // public/ai-names.js
 
-const aiNameList = ["Wug", "Another wug", "A third wug"];
+const aiNameList = ["Bibi", "Sass", "Mimi"];
 
 if (typeof module !== "undefined" && module.exports) {
   module.exports = { aiNameList };

@@ -23,6 +23,34 @@ function shuffle(array) {
   }
 }
 
+function reshuffleDeck(game) {
+  if (game.deck.length === 0 && game.discardPile.length > 0) {
+    // Keep the current pile card, but add all other discarded cards back to deck
+    const currentPileCard = game.pileCard;
+    game.deck = [...game.discardPile];
+
+    // Don't include the current pile card in the reshuffle
+    if (currentPileCard) {
+      const pileCardIndex = game.deck.findIndex(
+        (card) =>
+          card.symbol === currentPileCard.symbol &&
+          (game.mode === "consonant"
+            ? card.place === currentPileCard.place &&
+              card.manner === currentPileCard.manner
+            : card.height === currentPileCard.height &&
+              card.backness === currentPileCard.backness)
+      );
+      if (pileCardIndex !== -1) {
+        game.deck.splice(pileCardIndex, 1);
+      }
+    }
+
+    shuffle(game.deck);
+    game.discardPile = [];
+    console.log(`Deck reshuffled! New deck size: ${game.deck.length}`);
+  }
+}
+
 function createGame(roomId) {
   return {
     players: [],
@@ -37,6 +65,7 @@ function createGame(roomId) {
     gameDirection: 1, // 1 for clockwise, -1 for counterclockwise
     lastPlayedCard: null,
     lastPlayerId: null,
+    discardPile: [], // Track discarded cards to reshuffle when deck is empty
   };
 }
 
@@ -61,6 +90,7 @@ function dealGame(game, playerIds, mode = "consonant") {
   }
 
   game.pileCard = game.deck.pop();
+  game.discardPile = []; // Reset discard pile
   game.started = true;
   game.mode = mode;
   game.currentTurn = 0; // Human always starts
@@ -109,6 +139,12 @@ function aiMakeDecision(game, aiId) {
 
     if (cardIndex !== -1) {
       hand.splice(cardIndex, 1);
+
+      // Add the old pile card to discard pile (if it exists)
+      if (game.pileCard) {
+        game.discardPile.push(game.pileCard);
+      }
+
       game.pileCard = cardToPlay;
       game.lastPlayedCard = cardToPlay;
       game.lastPlayerId = aiId;
@@ -130,6 +166,9 @@ function aiMakeDecision(game, aiId) {
     }
   } else {
     // AI draws a card
+    // Check if deck needs reshuffling
+    reshuffleDeck(game);
+
     if (game.deck.length > 0) {
       const drawnCard = game.deck.pop();
       hand.push(drawnCard);
@@ -205,6 +244,12 @@ io.on("connection", (socket) => {
 
     if (isMatch(card, game.pileCard, game.mode)) {
       hand.splice(cardIndex, 1);
+
+      // Add the old pile card to discard pile (if it exists)
+      if (game.pileCard) {
+        game.discardPile.push(game.pileCard);
+      }
+
       game.pileCard = card;
       game.lastPlayedCard = card;
       game.lastPlayerId = socket.id;
@@ -250,6 +295,9 @@ io.on("connection", (socket) => {
       socket.emit("error", { message: "Not your turn" });
       return;
     }
+
+    // Check if deck needs reshuffling
+    reshuffleDeck(game);
 
     if (game.deck.length > 0) {
       const drawnCard = game.deck.pop();
@@ -307,13 +355,47 @@ function processAITurns(game, roomId) {
     }
 
     if (decision) {
-      // Add delay to make AI moves visible
+      // AI takes 2 seconds to play their card
+      const totalDelay = 2000;
+
+      // Check if AI will say something (30% chance)
+      const aiNames = require("./public/ai-names.js").aiNameList;
+      const aiIndex = parseInt(aiId.split("_")[1]) - 1;
+      const aiName = aiNames[aiIndex] || "Wug";
+      const wugKey = aiName.toLowerCase().replace(/\s+/g, "");
+
+      let phrase = null;
+      if (decision.action === "play") {
+        try {
+          // We'll evaluate the phrase function on the client side
+          phrase = {
+            wugKey: wugKey,
+            card: decision.card,
+            mode: game.mode,
+          };
+        } catch (error) {
+          console.log("Error getting phrase:", error);
+        }
+      }
+
+      // Show speech bubble at 2 second mark (if AI will speak)
+      if (phrase) {
+        setTimeout(() => {
+          io.to(roomId).emit("aiThinking", {
+            playerId: aiId,
+            phrase: phrase,
+          });
+        }, 2000);
+      }
+
+      // Play the card at 4 second mark
       setTimeout(() => {
         if (decision.action === "play") {
           io.to(roomId).emit("cardPlayed", {
             card: decision.card,
             playerId: aiId,
             turn: game.currentTurn,
+            phrase: phrase,
           });
 
           // Check for AI win
@@ -342,7 +424,7 @@ function processAITurns(game, roomId) {
             turn: game.currentTurn,
           });
         }
-      }, 1000); // 1 second delay between AI moves
+      }, 2000); // 2 second delay for AI to play their card
     } else {
       // AI can't make a decision (no playable cards and deck is empty)
       // Skip this AI's turn and move to next player
