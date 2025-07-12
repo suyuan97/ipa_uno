@@ -939,12 +939,20 @@
               } else {
                 skippedIndex = (aiIndex + 2) % 3;
               }
-              const skippedName = aiNames[skippedIndex] || "Wug";
-              showSpeechBubble(skippedIndex + 1, getAISkipPhrase(skippedName));
-              addLogEntry(
-                `${skippedName}: "${getAISkipPhrase(skippedName)}"`,
-                "ai-phrase"
-              );
+              // Only show skip phrase if the skipped player is an AI
+              const skippedPlayerTurn = data.turn === 0 ? 3 : data.turn - 1;
+              // FIX: Only show skip phrase if skippedPlayerTurn is not 0 (not human)
+              if (skippedIndex !== -1 && skippedPlayerTurn !== 0) {
+                const skippedName = aiNames[skippedIndex] || "Wug";
+                showSpeechBubble(
+                  skippedIndex + 1,
+                  getAISkipPhrase(skippedName)
+                );
+                addLogEntry(
+                  `${skippedName}: "${getAISkipPhrase(skippedName)}"`,
+                  "ai-phrase"
+                );
+              }
             }
           } else {
             message = `${aiName} played ${data.card.symbol}`;
@@ -977,6 +985,11 @@
           if (data.isPlusTwo) {
             addLogEntry(
               `You drew ${data.cardsDrawn} cards due to +2!`,
+              "player"
+            );
+          } else if (data.isPlusFour) {
+            addLogEntry(
+              `You drew ${data.cardsDrawn} cards because of +4!`,
               "player"
             );
           } else {
