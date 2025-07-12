@@ -89,9 +89,9 @@ function dealGame(game, playerIds, mode = "consonant") {
     game.aiPlayers.push(aiId);
   }
 
-  // Ensure the first pile card is never a reverse card
+  // Ensure the first pile card is never a reverse or change card
   let pileCard = game.deck.pop();
-  while (pileCard && pileCard.isReverse) {
+  while (pileCard && (pileCard.isReverse || pileCard.isChange)) {
     game.deck.unshift(pileCard); // Put it back at the bottom
     shuffle(game.deck);
     pileCard = game.deck.pop();
@@ -104,11 +104,14 @@ function dealGame(game, playerIds, mode = "consonant") {
 }
 
 function isMatch(cardA, cardB, mode) {
+  // Change cards can be played on any card, and any card can be played on a change card
+  if (cardA.isChange || cardB.isChange) {
+    return true;
+  }
   // Reverse cards can be played on any card
   if (cardA.isReverse || cardB.isReverse) {
     return true;
   }
-
   if (mode === "consonant") {
     return cardA.place === cardB.place || cardA.manner === cardB.manner;
   } else {
@@ -253,7 +256,14 @@ io.on("connection", (socket) => {
   });
 
   socket.on("playCard", (data) => {
-    const { roomId, cardIndex } = data;
+    const {
+      roomId,
+      cardIndex,
+      changePlace,
+      changeManner,
+      changeHeight,
+      changeBackness,
+    } = data;
     const game = games[roomId];
 
     if (!game || game.currentTurn !== 0) {
@@ -263,6 +273,49 @@ io.on("connection", (socket) => {
 
     const hand = game.hands[socket.id];
     const card = hand[cardIndex];
+
+    // Handle change card
+    if (card.isChange) {
+      // Remove the card from hand
+      hand.splice(cardIndex, 1);
+      // Add the old pile card to discard pile (if it exists)
+      if (game.pileCard) {
+        game.discardPile.push(game.pileCard);
+      }
+      // Set the new pile card with chosen articulation
+      let newCard = { ...card };
+      if (game.mode === "consonant") {
+        newCard.place = changePlace;
+        newCard.manner = changeManner;
+      } else {
+        newCard.height = changeHeight;
+        newCard.backness = changeBackness;
+      }
+      game.pileCard = newCard;
+      game.lastPlayedCard = newCard;
+      game.lastPlayerId = socket.id;
+      // Check for win
+      if (hand.length === 0) {
+        io.to(roomId).emit("gameOver", { winner: socket.id });
+        return;
+      }
+      // Move to next turn
+      nextTurn(game);
+      // Update human player's hand
+      io.to(socket.id).emit("updateHand", {
+        hand: game.hands[socket.id],
+      });
+      // Broadcast the play
+      io.to(roomId).emit("cardPlayed", {
+        card: newCard,
+        playerId: socket.id,
+        turn: game.currentTurn,
+        isChange: true,
+      });
+      // Process AI turns
+      processAITurns(game, roomId);
+      return;
+    }
 
     if (isMatch(card, game.pileCard, game.mode)) {
       hand.splice(cardIndex, 1);

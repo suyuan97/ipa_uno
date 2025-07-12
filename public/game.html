@@ -528,6 +528,54 @@
           top: calc(100% + 140px);
         }
       }
+
+      /* Change Card Modal Styles */
+      #changeModal {
+        display: none;
+        position: fixed;
+        z-index: 20000;
+        left: 0;
+        top: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.3);
+        justify-content: center;
+        align-items: center;
+      }
+      #changeModal .modal-content {
+        background: #fff;
+        border-radius: 12px;
+        padding: 32px 24px 24px 24px;
+        box-shadow: 0 8px 32px rgba(33, 150, 243, 0.18);
+        min-width: 280px;
+        max-width: 90vw;
+        text-align: center;
+      }
+      #changeModal label {
+        display: block;
+        margin: 12px 0 4px 0;
+        font-weight: bold;
+      }
+      #changeModal select {
+        margin-bottom: 16px;
+        padding: 6px 12px;
+        border-radius: 6px;
+        border: 1px solid #7db6e8;
+        font-size: 1rem;
+      }
+      #changeModal button {
+        margin-top: 12px;
+        padding: 8px 20px;
+        border-radius: 6px;
+        border: none;
+        background: #7db6e8;
+        color: #fff;
+        font-size: 1rem;
+        cursor: pointer;
+      }
+      #changeModal button:hover {
+        background: #2196f3;
+      }
     </style>
   </head>
   <body>
@@ -574,6 +622,17 @@
       </div>
       <!-- Action Log -->
       <div class="action-log" id="actionLog"></div>
+
+      <!-- Change Card Modal -->
+      <div id="changeModal">
+        <div class="modal-content">
+          <h2>Choose Articulation</h2>
+          <form id="changeForm">
+            <div id="changeOptions"></div>
+            <button type="submit">Confirm</button>
+          </form>
+        </div>
+      </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
@@ -668,9 +727,18 @@
         } else {
           const aiIndex = parseInt(data.playerId.split("_")[1]) - 1;
           const aiName = aiNames[aiIndex] || "Wug";
-          const message = data.isReverse
-            ? `${aiName} played ${data.card.symbol} (REVERSE!)`
-            : `${aiName} played ${data.card.symbol}`;
+          let message;
+          if (data.card.isChange) {
+            const changeText =
+              currentMode === "consonant"
+                ? `${data.card.place}, ${data.card.manner}`
+                : `${data.card.height}, ${data.card.backness}`;
+            message = `${aiName} played ${data.card.symbol} (CHANGE to ${changeText}!)`;
+          } else if (data.isReverse) {
+            message = `${aiName} played ${data.card.symbol} (REVERSE!)`;
+          } else {
+            message = `${aiName} played ${data.card.symbol}`;
+          }
           addLogEntry(message, "ai");
 
           // Update AI card count
@@ -679,6 +747,16 @@
             `Updated ${data.playerId} card count to:`,
             aiCardCounts[data.playerId]
           );
+
+          // Show AI change card phrase in speech bubble
+          if (data.card.isChange) {
+            const changeText =
+              currentMode === "consonant"
+                ? `${data.card.place}, ${data.card.manner}`
+                : `${data.card.height}, ${data.card.backness}`;
+            showSpeechBubble(aiIndex + 1, `🪄${changeText}🪄`);
+            addLogEntry(`${aiName}: "🪄${changeText}🪄"`, "ai-phrase");
+          }
         }
 
         currentTurn = data.turn;
@@ -842,7 +920,20 @@
         if (pileCard) {
           const div = document.createElement("div");
           div.className = "card pile-card";
-          div.innerHTML = `<div>${pileCard.symbol}</div>`;
+
+          // Special display for change cards
+          if (pileCard.isChange) {
+            let changeText = "";
+            if (currentMode === "consonant") {
+              changeText = `${pileCard.place}, ${pileCard.manner}`;
+            } else {
+              changeText = `${pileCard.height}, ${pileCard.backness}`;
+            }
+            div.innerHTML = `<div>🪄${changeText}🪄</div>`;
+          } else {
+            div.innerHTML = `<div>${pileCard.symbol}</div>`;
+          }
+
           if (currentDifficulty === "easy") {
             div.innerHTML += `<span class="card-label">${
               currentMode === "consonant"
@@ -966,6 +1057,11 @@
         render(); // This will re-render the hand with no click handlers
 
         const card = hand[index];
+        // Intercept change card (🪄)
+        if (card.isChange) {
+          showChangeModal(card, index);
+          return;
+        }
         if (isMatch(card, pileCard)) {
           socket.emit("playCard", { roomId, cardIndex: index });
         } else {
@@ -978,6 +1074,120 @@
             document.getElementById("hintButton").disabled = false;
           render();
         }
+      }
+
+      // Show the change card modal
+      function showChangeModal(card, cardIndex) {
+        const modal = document.getElementById("changeModal");
+        const optionsDiv = document.getElementById("changeOptions");
+        optionsDiv.innerHTML = "";
+        // Determine mode
+        if (currentMode === "consonant") {
+          // Place
+          const placeLabel = document.createElement("label");
+          placeLabel.textContent = "Place of Articulation";
+          placeLabel.setAttribute("for", "changePlace");
+          optionsDiv.appendChild(placeLabel);
+          const placeSelect = document.createElement("select");
+          placeSelect.id = "changePlace";
+          [
+            "bilabial",
+            "labiodental",
+            "dental",
+            "alveolar",
+            "postalveolar",
+            "retroflex",
+            "palatal",
+            "velar",
+            "uvular",
+            "pharyngeal",
+            "glottal",
+          ].forEach((p) => {
+            const opt = document.createElement("option");
+            opt.value = p;
+            opt.textContent = p.charAt(0).toUpperCase() + p.slice(1);
+            placeSelect.appendChild(opt);
+          });
+          optionsDiv.appendChild(placeSelect);
+          // Manner
+          const mannerLabel = document.createElement("label");
+          mannerLabel.textContent = "Manner of Articulation";
+          mannerLabel.setAttribute("for", "changeManner");
+          optionsDiv.appendChild(mannerLabel);
+          const mannerSelect = document.createElement("select");
+          mannerSelect.id = "changeManner";
+          [
+            "plosive",
+            "nasal",
+            "trill",
+            "tap",
+            "fricative",
+            "affricate",
+            "approximant",
+            "lateral approximant",
+          ].forEach((m) => {
+            const opt = document.createElement("option");
+            opt.value = m;
+            opt.textContent = m.charAt(0).toUpperCase() + m.slice(1);
+            mannerSelect.appendChild(opt);
+          });
+          optionsDiv.appendChild(mannerSelect);
+        } else {
+          // Vowel mode: Height and Backness
+          const heightLabel = document.createElement("label");
+          heightLabel.textContent = "Height";
+          heightLabel.setAttribute("for", "changeHeight");
+          optionsDiv.appendChild(heightLabel);
+          const heightSelect = document.createElement("select");
+          heightSelect.id = "changeHeight";
+          [
+            "close",
+            "near-close",
+            "close-mid",
+            "mid",
+            "open-mid",
+            "near-open",
+            "open",
+          ].forEach((h) => {
+            const opt = document.createElement("option");
+            opt.value = h;
+            opt.textContent = h.charAt(0).toUpperCase() + h.slice(1);
+            heightSelect.appendChild(opt);
+          });
+          optionsDiv.appendChild(heightSelect);
+          const backLabel = document.createElement("label");
+          backLabel.textContent = "Backness";
+          backLabel.setAttribute("for", "changeBackness");
+          optionsDiv.appendChild(backLabel);
+          const backSelect = document.createElement("select");
+          backSelect.id = "changeBackness";
+          ["front", "central", "back"].forEach((b) => {
+            const opt = document.createElement("option");
+            opt.value = b;
+            opt.textContent = b.charAt(0).toUpperCase() + b.slice(1);
+            backSelect.appendChild(opt);
+          });
+          optionsDiv.appendChild(backSelect);
+        }
+        modal.style.display = "flex";
+        // Handle form submit
+        const form = document.getElementById("changeForm");
+        form.onsubmit = function (e) {
+          e.preventDefault();
+          let payload = { roomId, cardIndex };
+          if (currentMode === "consonant") {
+            payload.changePlace = document.getElementById("changePlace").value;
+            payload.changeManner =
+              document.getElementById("changeManner").value;
+          } else {
+            payload.changeHeight =
+              document.getElementById("changeHeight").value;
+            payload.changeBackness =
+              document.getElementById("changeBackness").value;
+          }
+          modal.style.display = "none";
+          socket.emit("playCard", payload);
+        };
       }
 
       function drawCard() {
