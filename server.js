@@ -89,7 +89,14 @@ function dealGame(game, playerIds, mode = "consonant") {
     game.aiPlayers.push(aiId);
   }
 
-  game.pileCard = game.deck.pop();
+  // Ensure the first pile card is never a reverse card
+  let pileCard = game.deck.pop();
+  while (pileCard && pileCard.isReverse) {
+    game.deck.unshift(pileCard); // Put it back at the bottom
+    shuffle(game.deck);
+    pileCard = game.deck.pop();
+  }
+  game.pileCard = pileCard;
   game.discardPile = []; // Reset discard pile
   game.started = true;
   game.mode = mode;
@@ -97,6 +104,11 @@ function dealGame(game, playerIds, mode = "consonant") {
 }
 
 function isMatch(cardA, cardB, mode) {
+  // Reverse cards can be played on any card
+  if (cardA.isReverse || cardB.isReverse) {
+    return true;
+  }
+
   if (mode === "consonant") {
     return cardA.place === cardB.place || cardA.manner === cardB.manner;
   } else {
@@ -148,6 +160,16 @@ function aiMakeDecision(game, aiId) {
       game.pileCard = cardToPlay;
       game.lastPlayedCard = cardToPlay;
       game.lastPlayerId = aiId;
+
+      // Handle reverse card effect
+      if (cardToPlay.isReverse) {
+        game.gameDirection *= -1; // Reverse the direction
+        console.log(
+          `Direction reversed! New direction: ${
+            game.gameDirection === 1 ? "clockwise" : "counterclockwise"
+          }`
+        );
+      }
 
       return {
         action: "play",
@@ -254,6 +276,16 @@ io.on("connection", (socket) => {
       game.lastPlayedCard = card;
       game.lastPlayerId = socket.id;
 
+      // Handle reverse card effect
+      if (card.isReverse) {
+        game.gameDirection *= -1; // Reverse the direction
+        console.log(
+          `Direction reversed! New direction: ${
+            game.gameDirection === 1 ? "clockwise" : "counterclockwise"
+          }`
+        );
+      }
+
       // Check for win
       if (hand.length === 0) {
         io.to(roomId).emit("gameOver", { winner: socket.id });
@@ -273,6 +305,7 @@ io.on("connection", (socket) => {
         card: card,
         playerId: socket.id,
         turn: game.currentTurn,
+        isReverse: card.isReverse,
       });
 
       // Process AI turns
@@ -396,6 +429,7 @@ function processAITurns(game, roomId) {
             playerId: aiId,
             turn: game.currentTurn,
             phrase: phrase,
+            isReverse: decision.card.isReverse,
           });
 
           // Check for AI win

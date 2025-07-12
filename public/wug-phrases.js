@@ -60,6 +60,16 @@ const wugPhrases = {
         "Let's make up a new word together! Blorptastic!",
         "I just did a happy dance in my head!",
       ],
+      drawCard: [
+        "Oh no, I have to draw! What a bummer!",
+        "Oops, no match! Time for a new card!",
+        "I hope I get a good one!",
+        "Drawing cards is like a surprise party!",
+        "Maybe this card will be lucky!",
+        "Wug luck, don't fail me now!",
+        "Aww, I wanted to play!",
+        "Well, here goes nothing!",
+      ],
     },
   },
 
@@ -136,6 +146,16 @@ const wugPhrases = {
         "I'm not just a pretty face—I know my phonemes!",
         "Wug out!",
       ],
+      drawCard: [
+        "Ugh, I have to draw? Rude!",
+        "No match? This game is rigged!",
+        "Watch me pull something fabulous!",
+        "I deserve a better card than this!",
+        "Plot twist: I draw the best card!",
+        "Oh please, give me something good!",
+        "I can't believe I have to draw!",
+        "Drama! I have to draw a card!",
+      ],
     },
   },
 
@@ -210,6 +230,16 @@ const wugPhrases = {
         "Let's make a word garden—full of sounds!",
         "I just imagined a Wug choir singing IPA symbols!",
         "I love learning new things with you!",
+      ],
+      drawCard: [
+        "Oh, I have to draw a card. Maybe it's a nice one!",
+        "No match for me... that's okay!",
+        "I wonder what card I'll get!",
+        "Drawing a card is like finding a new friend!",
+        "Maybe this card will help me next time!",
+        "It's okay, I like surprises!",
+        "A gentle draw for a gentle Wug!",
+        "Patience is a virtue, even in UNO!",
       ],
     },
   },
@@ -308,4 +338,12 @@ function getAIPlayPhrase(wugName, card, mode) {
   const chosenCategory =
     availableCategories[Math.floor(Math.random() * availableCategories.length)];
   return getRandomPhrase(normalized, chosenCategory);
+}
+
+// Function to get a random draw phrase for a specific Wug
+function getAIDrawPhrase(wugName) {
+  // Capitalize first letter for lookup
+  const normalized =
+    wugName.charAt(0).toUpperCase() + wugName.slice(1).toLowerCase();
+  return getRandomPhrase(normalized, "drawCard");
 }

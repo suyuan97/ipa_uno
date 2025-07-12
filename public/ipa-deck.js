@@ -56,6 +56,10 @@ const consonantDeck = [
   { symbol: "ɭ", place: "retroflex", manner: "lateral approximant" },
   { symbol: "ʎ", place: "palatal", manner: "lateral approximant" },
   { symbol: "ʟ", place: "velar", manner: "lateral approximant" },
+  // Reverse cards
+  { symbol: "↺", place: "reverse", manner: "reverse", isReverse: true },
+  { symbol: "↺", place: "reverse", manner: "reverse", isReverse: true },
+  { symbol: "↺", place: "reverse", manner: "reverse", isReverse: true },
 ];
 
 const vowelDeck = [
@@ -86,6 +90,10 @@ const vowelDeck = [
   { symbol: "ɶ", height: "open", backness: "front" },
   { symbol: "ɑ", height: "open", backness: "back" },
   { symbol: "ɒ", height: "open", backness: "back" },
+  // Reverse cards
+  { symbol: "↺", height: "reverse", backness: "reverse", isReverse: true },
+  { symbol: "↺", height: "reverse", backness: "reverse", isReverse: true },
+  { symbol: "↺", height: "reverse", backness: "reverse", isReverse: true },
 ];
 
 // Make available for both browser and Node.js
