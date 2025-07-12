@@ -74,6 +74,12 @@ const consonantDeck = [
   { symbol: "+2", place: "plusTwo", manner: "plusTwo", isPlusTwo: true },
   { symbol: "+2", place: "plusTwo", manner: "plusTwo", isPlusTwo: true },
   { symbol: "+2", place: "plusTwo", manner: "plusTwo", isPlusTwo: true },
+  // +4 cards
+  { symbol: "+4", place: "plusFour", manner: "plusFour", isPlusFour: true },
+  { symbol: "+4", place: "plusFour", manner: "plusFour", isPlusFour: true },
+  { symbol: "+4", place: "plusFour", manner: "plusFour", isPlusFour: true },
+  { symbol: "+4", place: "plusFour", manner: "plusFour", isPlusFour: true },
+  { symbol: "+4", place: "plusFour", manner: "plusFour", isPlusFour: true },
 ];
 
 const vowelDeck = [
@@ -113,6 +119,9 @@ const vowelDeck = [
   // +2 cards
   { symbol: "+2", height: "plusTwo", backness: "plusTwo", isPlusTwo: true },
   { symbol: "+2", height: "plusTwo", backness: "plusTwo", isPlusTwo: true },
+  // +4 cards
+  { symbol: "+4", height: "plusFour", backness: "plusFour", isPlusFour: true },
+  { symbol: "+4", height: "plusFour", backness: "plusFour", isPlusFour: true },
 ];
 
 // Make available for both browser and Node.js

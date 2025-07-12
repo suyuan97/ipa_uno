@@ -83,6 +83,19 @@ const wugPhrases = {
         "I hope I get a wild one!",
         "Wug power, activate!",
       ],
+      plusFour: [
+        // Bibi: bubbly, silly, encouraging
+        "Four cards? That's a wugtastic challenge!",
+        "Whoa! Four new friends for my hand!",
+        "I hope one of these is a wild card!",
+        "Wug power times four!",
+        "That's okay, I love surprises!",
+        "Four more? I can handle it!",
+        "The more the merrier!",
+        "I hope I get a shiny one!",
+        "Wug hug for my new cards!",
+        "Let's see what I get!",
+      ],
     },
   },
 
@@ -182,6 +195,19 @@ const wugPhrases = {
         "I hope these cards are as fabulous as me!",
         "Two more? Bring it on!",
       ],
+      plusFour: [
+        // Sass: sassy, dramatic, stylish
+        "Four cards? This is sabotage!",
+        "Excuse me? Four?",
+        "This is a fashion emergency!",
+        "I guess I'll just have to slay with four more cards!",
+        "Plot twist: I make these cards work!",
+        "Oh, the drama!",
+        "Four more? I hope they're fabulous!",
+        "I can't believe this is happening!",
+        "I guess it's my turn to shine... with four more cards!",
+        "Bring it on!",
+      ],
     },
   },
 
@@ -279,6 +305,19 @@ const wugPhrases = {
         "It's all part of the fun!",
         "Thank you, I'll take two!",
         "I love surprises, even two at a time!",
+      ],
+      plusFour: [
+        // Mimi: gentle, sweet, supportive
+        "Oh, four cards? That's a lot!",
+        "Four more friends for my hand!",
+        "I hope these cards are kind to me.",
+        "Patience is a virtue, even with four extra cards!",
+        "I guess the game wanted me to have more company!",
+        "No worries, I'll make the best of it!",
+        "Maybe these cards will help me next time!",
+        "It's all part of the fun!",
+        "Thank you, I'll take four!",
+        "I love surprises, even four at a time!",
       ],
     },
   },
@@ -393,4 +432,12 @@ function getAIPlusTwoPhrase(wugName) {
   const normalized =
     wugName.charAt(0).toUpperCase() + wugName.slice(1).toLowerCase();
   return getRandomPhrase(normalized, "plusTwo");
+}
+
+// Function to get a random plusFour phrase for a specific Wug
+function getAIPlusFourPhrase(wugName) {
+  // Capitalize first letter for lookup
+  const normalized =
+    wugName.charAt(0).toUpperCase() + wugName.slice(1).toLowerCase();
+  return getRandomPhrase(normalized, "plusFour");
 }

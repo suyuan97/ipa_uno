@@ -171,6 +171,31 @@
         }
       }
 
+      .plus-four {
+        background: linear-gradient(
+          135deg,
+          #ff0000 0%,
+          #ff9900 20%,
+          #ffff00 40%,
+          #33cc33 60%,
+          #3399ff 80%,
+          #9900cc 100%
+        ) !important;
+        border-color: #333 !important;
+        color: white !important;
+        font-weight: bold !important;
+        animation: plus-four-glow 2s ease-in-out infinite alternate;
+      }
+      @keyframes plus-four-glow {
+        from {
+          box-shadow: 0 0 5px rgba(255, 0, 255, 0.5);
+        }
+        to {
+          box-shadow: 0 0 20px rgba(255, 0, 255, 0.8),
+            0 0 30px rgba(255, 255, 0, 0.6);
+        }
+      }
+
       .ai-player {
         position: absolute;
         padding: 10px;
@@ -752,11 +777,35 @@
           const aiName = aiNames[aiIndex] || "Wug";
           let message;
           if (data.card.isChange) {
-            const changeText =
-              currentMode === "consonant"
-                ? `${data.card.place}, ${data.card.manner}`
-                : `${data.card.height}, ${data.card.backness}`;
+            let changeText = "";
+            if (currentMode === "consonant") {
+              if (
+                data.card.place !== "change" &&
+                data.card.manner === "change"
+              ) {
+                changeText = data.card.place;
+              } else if (
+                data.card.manner !== "change" &&
+                data.card.place === "change"
+              ) {
+                changeText = data.card.manner;
+              }
+            } else {
+              if (
+                data.card.height !== "change" &&
+                data.card.backness === "change"
+              ) {
+                changeText = data.card.height;
+              } else if (
+                data.card.backness !== "change" &&
+                data.card.height === "change"
+              ) {
+                changeText = data.card.backness;
+              }
+            }
             message = `${aiName} played ${data.card.symbol} (CHANGE to ${changeText}!)`;
+            showSpeechBubble(aiIndex + 1, `🪄${changeText}🪄`);
+            addLogEntry(`${aiName}: "🪄${changeText}🪄"`, "ai-phrase");
           } else if (data.card.isPlusTwo) {
             message = `${aiName} played ${data.card.symbol} (+2!)`;
           } else if (data.isReverse) {
@@ -811,7 +860,18 @@
         } else {
           const aiIndex = parseInt(data.playerId.split("_")[1]) - 1;
           const aiName = aiNames[aiIndex] || "Wug";
-          if (data.isPlusTwo) {
+          if (data.isPlusFour) {
+            addLogEntry(
+              `${aiName} drew ${data.cardsDrawn} cards due to +4!`,
+              "ai"
+            );
+            // Show AI plusFour phrase in speech bubble
+            if (typeof getAIPlusFourPhrase === "function") {
+              const phrase = getAIPlusFourPhrase(aiName);
+              showSpeechBubble(aiIndex + 1, phrase);
+              addLogEntry(`${aiName}: "${phrase}"`, "ai-phrase");
+            }
+          } else if (data.isPlusTwo) {
             addLogEntry(
               `${aiName} drew ${data.cardsDrawn} cards due to +2!`,
               "ai"
@@ -828,7 +888,11 @@
           // Update AI card count
           aiCardCounts[data.playerId] += data.cardsDrawn ? data.cardsDrawn : 1;
           // Show AI draw phrase in speech bubble
-          if (!data.isPlusTwo && typeof getAIDrawPhrase === "function") {
+          if (
+            !data.isPlusTwo &&
+            !data.isPlusFour &&
+            typeof getAIDrawPhrase === "function"
+          ) {
             const phrase = getAIDrawPhrase(aiName);
             showSpeechBubble(aiIndex + 1, phrase);
             addLogEntry(`${aiName}: "${phrase}"`, "ai-phrase");
@@ -937,6 +1001,11 @@
             div.classList.add("plus-two");
           }
 
+          // Add plus-four class if it's a +4 card
+          if (card.isPlusFour) {
+            div.classList.add("plus-four");
+          }
+
           if (isMatch(card, pileCard)) {
             hasPlayable = true;
           }
@@ -975,9 +1044,17 @@
           if (pileCard.isChange) {
             let changeText = "";
             if (currentMode === "consonant") {
-              changeText = `${pileCard.place}, ${pileCard.manner}`;
+              if (pileCard.place !== "change") {
+                changeText = pileCard.place;
+              } else if (pileCard.manner !== "change") {
+                changeText = pileCard.manner;
+              }
             } else {
-              changeText = `${pileCard.height}, ${pileCard.backness}`;
+              if (pileCard.height !== "change") {
+                changeText = pileCard.height;
+              } else if (pileCard.backness !== "change") {
+                changeText = pileCard.backness;
+              }
             }
             div.innerHTML = `<div>🪄${changeText}🪄</div>`;
           } else {
@@ -1000,6 +1077,11 @@
           // Add plus-two class if it's a +2 card
           if (pileCard.isPlusTwo) {
             div.classList.add("plus-two");
+          }
+
+          // Add plus-four class if it's a +4 card
+          if (pileCard.isPlusFour) {
+            div.classList.add("plus-four");
           }
 
           pileDiv.appendChild(div);
@@ -1138,11 +1220,15 @@
         optionsDiv.innerHTML = "";
         // Determine mode
         if (currentMode === "consonant") {
-          // Place
-          const placeLabel = document.createElement("label");
-          placeLabel.textContent = "Place of Articulation";
-          placeLabel.setAttribute("for", "changePlace");
-          optionsDiv.appendChild(placeLabel);
+          // Radio buttons for place or manner
+          const radioDiv = document.createElement("div");
+          radioDiv.style.marginBottom = "12px";
+          radioDiv.innerHTML = `
+            <label><input type="radio" name="changeDim" value="place" checked> Place of Articulation</label>
+            <label style="margin-left:16px;"><input type="radio" name="changeDim" value="manner"> Manner of Articulation</label>
+          `;
+          optionsDiv.appendChild(radioDiv);
+          // Place dropdown
           const placeSelect = document.createElement("select");
           placeSelect.id = "changePlace";
           [
@@ -1164,13 +1250,10 @@
             placeSelect.appendChild(opt);
           });
           optionsDiv.appendChild(placeSelect);
-          // Manner
-          const mannerLabel = document.createElement("label");
-          mannerLabel.textContent = "Manner of Articulation";
-          mannerLabel.setAttribute("for", "changeManner");
-          optionsDiv.appendChild(mannerLabel);
+          // Manner dropdown
           const mannerSelect = document.createElement("select");
           mannerSelect.id = "changeManner";
+          mannerSelect.style.display = "none";
           [
             "plosive",
             "nasal",
@@ -1187,12 +1270,30 @@
             mannerSelect.appendChild(opt);
           });
           optionsDiv.appendChild(mannerSelect);
+          // Radio change event
+          radioDiv
+            .querySelectorAll('input[name="changeDim"]')
+            .forEach((radio) => {
+              radio.onchange = function () {
+                if (this.value === "place") {
+                  placeSelect.style.display = "";
+                  mannerSelect.style.display = "none";
+                } else {
+                  placeSelect.style.display = "none";
+                  mannerSelect.style.display = "";
+                }
+              };
+            });
         } else {
-          // Vowel mode: Height and Backness
-          const heightLabel = document.createElement("label");
-          heightLabel.textContent = "Height";
-          heightLabel.setAttribute("for", "changeHeight");
-          optionsDiv.appendChild(heightLabel);
+          // Vowel mode: height or backness
+          const radioDiv = document.createElement("div");
+          radioDiv.style.marginBottom = "12px";
+          radioDiv.innerHTML = `
+            <label><input type="radio" name="changeDim" value="height" checked> Height</label>
+            <label style="margin-left:16px;"><input type="radio" name="changeDim" value="backness"> Backness</label>
+          `;
+          optionsDiv.appendChild(radioDiv);
+          // Height dropdown
           const heightSelect = document.createElement("select");
           heightSelect.id = "changeHeight";
           [
@@ -1210,12 +1311,10 @@
             heightSelect.appendChild(opt);
           });
           optionsDiv.appendChild(heightSelect);
-          const backLabel = document.createElement("label");
-          backLabel.textContent = "Backness";
-          backLabel.setAttribute("for", "changeBackness");
-          optionsDiv.appendChild(backLabel);
+          // Backness dropdown
           const backSelect = document.createElement("select");
           backSelect.id = "changeBackness";
+          backSelect.style.display = "none";
           ["front", "central", "back"].forEach((b) => {
             const opt = document.createElement("option");
             opt.value = b;
@@ -1223,6 +1322,20 @@
             backSelect.appendChild(opt);
           });
           optionsDiv.appendChild(backSelect);
+          // Radio change event
+          radioDiv
+            .querySelectorAll('input[name="changeDim"]')
+            .forEach((radio) => {
+              radio.onchange = function () {
+                if (this.value === "height") {
+                  heightSelect.style.display = "";
+                  backSelect.style.display = "none";
+                } else {
+                  heightSelect.style.display = "none";
+                  backSelect.style.display = "";
+                }
+              };
+            });
         }
         modal.style.display = "flex";
         // Handle form submit
@@ -1231,14 +1344,27 @@
           e.preventDefault();
           let payload = { roomId, cardIndex };
           if (currentMode === "consonant") {
-            payload.changePlace = document.getElementById("changePlace").value;
-            payload.changeManner =
-              document.getElementById("changeManner").value;
+            const dim = optionsDiv.querySelector(
+              'input[name="changeDim"]:checked'
+            ).value;
+            if (dim === "place") {
+              payload.changePlace =
+                document.getElementById("changePlace").value;
+            } else {
+              payload.changeManner =
+                document.getElementById("changeManner").value;
+            }
           } else {
-            payload.changeHeight =
-              document.getElementById("changeHeight").value;
-            payload.changeBackness =
-              document.getElementById("changeBackness").value;
+            const dim = optionsDiv.querySelector(
+              'input[name="changeDim"]:checked'
+            ).value;
+            if (dim === "height") {
+              payload.changeHeight =
+                document.getElementById("changeHeight").value;
+            } else {
+              payload.changeBackness =
+                document.getElementById("changeBackness").value;
+            }
           }
           modal.style.display = "none";
           socket.emit("playCard", payload);
@@ -1273,6 +1399,8 @@
         if (card.symbol === pileCard.symbol) return true;
         if (card.symbol === "W" && pileCard.symbol === "U") return true;
         if (card.symbol === "U" && pileCard.symbol === "W") return true;
+        // +4 cards can be played on any card, and any card can be played on a +4 card
+        if (card.isPlusFour || pileCard.isPlusFour) return true;
         // +2 cards can be played on any card, and any card can be played on a +2 card
         if (card.isPlusTwo || pileCard.isPlusTwo) return true;
         // Reverse cards can be played on any card
