@@ -143,6 +143,14 @@
         animation: reverse-glow 2s ease-in-out infinite alternate;
       }
 
+      .plus-two {
+        background: linear-gradient(135deg, #f44336, #d32f2f) !important;
+        border-color: #b71c1c !important;
+        color: white !important;
+        font-weight: bold !important;
+        animation: plus-two-glow 2s ease-in-out infinite alternate;
+      }
+
       @keyframes reverse-glow {
         from {
           box-shadow: 0 0 5px rgba(255, 87, 34, 0.5);
@@ -150,6 +158,16 @@
         to {
           box-shadow: 0 0 20px rgba(255, 87, 34, 0.8),
             0 0 30px rgba(233, 30, 99, 0.6);
+        }
+      }
+
+      @keyframes plus-two-glow {
+        from {
+          box-shadow: 0 0 5px rgba(244, 67, 54, 0.5);
+        }
+        to {
+          box-shadow: 0 0 20px rgba(244, 67, 54, 0.8),
+            0 0 30px rgba(211, 47, 47, 0.6);
         }
       }
 
@@ -720,9 +738,14 @@
         pileCard = data.card;
 
         if (data.playerId === socket.id) {
-          const message = data.isReverse
-            ? `You played ${data.card.symbol} (REVERSE!)`
-            : `You played ${data.card.symbol}`;
+          let message;
+          if (data.card.isPlusTwo) {
+            message = `You played ${data.card.symbol} (+2!)`;
+          } else if (data.isReverse) {
+            message = `You played ${data.card.symbol} (REVERSE!)`;
+          } else {
+            message = `You played ${data.card.symbol}`;
+          }
           addLogEntry(message, "player");
         } else {
           const aiIndex = parseInt(data.playerId.split("_")[1]) - 1;
@@ -734,6 +757,8 @@
                 ? `${data.card.place}, ${data.card.manner}`
                 : `${data.card.height}, ${data.card.backness}`;
             message = `${aiName} played ${data.card.symbol} (CHANGE to ${changeText}!)`;
+          } else if (data.card.isPlusTwo) {
+            message = `${aiName} played ${data.card.symbol} (+2!)`;
           } else if (data.isReverse) {
             message = `${aiName} played ${data.card.symbol} (REVERSE!)`;
           } else {
@@ -775,15 +800,35 @@
         console.log("Card drawn:", data);
 
         if (data.playerId === socket.id) {
-          addLogEntry("You drew a card", "player");
+          if (data.isPlusTwo) {
+            addLogEntry(
+              `You drew ${data.cardsDrawn} cards due to +2!`,
+              "player"
+            );
+          } else {
+            addLogEntry("You drew a card", "player");
+          }
         } else {
           const aiIndex = parseInt(data.playerId.split("_")[1]) - 1;
           const aiName = aiNames[aiIndex] || "Wug";
-          addLogEntry(`${aiName} drew a card`, "ai");
+          if (data.isPlusTwo) {
+            addLogEntry(
+              `${aiName} drew ${data.cardsDrawn} cards due to +2!`,
+              "ai"
+            );
+            // Show AI plusTwo phrase in speech bubble
+            if (typeof getAIPlusTwoPhrase === "function") {
+              const phrase = getAIPlusTwoPhrase(aiName);
+              showSpeechBubble(aiIndex + 1, phrase);
+              addLogEntry(`${aiName}: "${phrase}"`, "ai-phrase");
+            }
+          } else {
+            addLogEntry(`${aiName} drew a card`, "ai");
+          }
           // Update AI card count
-          aiCardCounts[data.playerId]++;
+          aiCardCounts[data.playerId] += data.cardsDrawn ? data.cardsDrawn : 1;
           // Show AI draw phrase in speech bubble
-          if (typeof getAIDrawPhrase === "function") {
+          if (!data.isPlusTwo && typeof getAIDrawPhrase === "function") {
             const phrase = getAIDrawPhrase(aiName);
             showSpeechBubble(aiIndex + 1, phrase);
             addLogEntry(`${aiName}: "${phrase}"`, "ai-phrase");
@@ -887,6 +932,11 @@
             div.classList.add("reverse");
           }
 
+          // Add plus-two class if it's a +2 card
+          if (card.isPlusTwo) {
+            div.classList.add("plus-two");
+          }
+
           if (isMatch(card, pileCard)) {
             hasPlayable = true;
           }
@@ -945,6 +995,11 @@
           // Add reverse class if it's a reverse card
           if (pileCard.isReverse) {
             div.classList.add("reverse");
+          }
+
+          // Add plus-two class if it's a +2 card
+          if (pileCard.isPlusTwo) {
+            div.classList.add("plus-two");
           }
 
           pileDiv.appendChild(div);
@@ -1218,6 +1273,8 @@
         if (card.symbol === pileCard.symbol) return true;
         if (card.symbol === "W" && pileCard.symbol === "U") return true;
         if (card.symbol === "U" && pileCard.symbol === "W") return true;
+        // +2 cards can be played on any card, and any card can be played on a +2 card
+        if (card.isPlusTwo || pileCard.isPlusTwo) return true;
         // Reverse cards can be played on any card
         if (card.isReverse || pileCard.isReverse) return true;
         return card.place === pileCard.place || card.manner === pileCard.manner;

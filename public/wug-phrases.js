@@ -70,6 +70,19 @@ const wugPhrases = {
         "Aww, I wanted to play!",
         "Well, here goes nothing!",
       ],
+      plusTwo: [
+        // Bibi: bubbly, silly, encouraging
+        "Oh no! Two cards? That's double the fun!",
+        "Double trouble! Here I go!",
+        "I guess I needed more cards for my collection!",
+        "Two more? I hope they're shiny!",
+        "Wug luck, don't fail me now!",
+        "I can handle two! Easy peasy!",
+        "Surprise cards! I love surprises!",
+        "That's okay, more cards means more chances!",
+        "I hope I get a wild one!",
+        "Wug power, activate!",
+      ],
     },
   },
 
@@ -156,6 +169,19 @@ const wugPhrases = {
         "I can't believe I have to draw!",
         "Drama! I have to draw a card!",
       ],
+      plusTwo: [
+        // Sass: sassy, dramatic, stylish
+        "Ugh, rude! Two cards?",
+        "Excuse me? I don't deserve this!",
+        "Double the drama!",
+        "Fine, I'll take two, but I'll look fabulous doing it.",
+        "Plot twist: I make these cards work!",
+        "Oh, the injustice!",
+        "I guess it's my turn to shine... with two more cards!",
+        "Who needs luck when you have style?",
+        "I hope these cards are as fabulous as me!",
+        "Two more? Bring it on!",
+      ],
     },
   },
 
@@ -240,6 +266,19 @@ const wugPhrases = {
         "It's okay, I like surprises!",
         "A gentle draw for a gentle Wug!",
         "Patience is a virtue, even in UNO!",
+      ],
+      plusTwo: [
+        // Mimi: gentle, sweet, supportive
+        "Oh, I have to draw two? That's okay!",
+        "Two more friends for my hand!",
+        "I hope these cards are kind to me.",
+        "Patience is a virtue, even with two extra cards!",
+        "I guess the game wanted me to have more company!",
+        "No worries, I'll make the best of it!",
+        "Maybe these cards will help me next time!",
+        "It's all part of the fun!",
+        "Thank you, I'll take two!",
+        "I love surprises, even two at a time!",
       ],
     },
   },
@@ -346,4 +385,12 @@ function getAIDrawPhrase(wugName) {
   const normalized =
     wugName.charAt(0).toUpperCase() + wugName.slice(1).toLowerCase();
   return getRandomPhrase(normalized, "drawCard");
+}
+
+// Function to get a random plusTwo phrase for a specific Wug
+function getAIPlusTwoPhrase(wugName) {
+  // Capitalize first letter for lookup
+  const normalized =
+    wugName.charAt(0).toUpperCase() + wugName.slice(1).toLowerCase();
+  return getRandomPhrase(normalized, "plusTwo");
 }

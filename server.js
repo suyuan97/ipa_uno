@@ -66,6 +66,7 @@ function createGame(roomId) {
     lastPlayedCard: null,
     lastPlayerId: null,
     discardPile: [], // Track discarded cards to reshuffle when deck is empty
+    plusTwoCount: 0, // Track accumulated +2 cards
   };
 }
 
@@ -91,7 +92,10 @@ function dealGame(game, playerIds, mode = "consonant") {
 
   // Ensure the first pile card is never a reverse or change card
   let pileCard = game.deck.pop();
-  while (pileCard && (pileCard.isReverse || pileCard.isChange)) {
+  while (
+    pileCard &&
+    (pileCard.isReverse || pileCard.isChange || pileCard.isPlusTwo)
+  ) {
     game.deck.unshift(pileCard); // Put it back at the bottom
     shuffle(game.deck);
     pileCard = game.deck.pop();
@@ -106,6 +110,10 @@ function dealGame(game, playerIds, mode = "consonant") {
 function isMatch(cardA, cardB, mode) {
   // Change cards can be played on any card, and any card can be played on a change card
   if (cardA.isChange || cardB.isChange) {
+    return true;
+  }
+  // +2 cards can be played on any card, and any card can be played on a +2 card
+  if (cardA.isPlusTwo || cardB.isPlusTwo) {
     return true;
   }
   // Reverse cards can be played on any card
@@ -140,7 +148,53 @@ function aiMakeDecision(game, aiId) {
   if (playableCards.length > 0) {
     // AI plays a card
     const randomIndex = Math.floor(Math.random() * playableCards.length);
-    const cardToPlay = playableCards[randomIndex];
+    let cardToPlay = playableCards[randomIndex];
+
+    // If it's a change card, set a random articulation
+    if (cardToPlay.isChange) {
+      cardToPlay = { ...cardToPlay };
+      if (game.mode === "consonant") {
+        const places = [
+          "bilabial",
+          "labiodental",
+          "dental",
+          "alveolar",
+          "postalveolar",
+          "retroflex",
+          "palatal",
+          "velar",
+          "uvular",
+          "pharyngeal",
+          "glottal",
+        ];
+        const manners = [
+          "plosive",
+          "nasal",
+          "trill",
+          "tap",
+          "fricative",
+          "affricate",
+          "approximant",
+          "lateral approximant",
+        ];
+        cardToPlay.place = places[Math.floor(Math.random() * places.length)];
+        cardToPlay.manner = manners[Math.floor(Math.random() * manners.length)];
+      } else {
+        const heights = [
+          "close",
+          "near-close",
+          "close-mid",
+          "mid",
+          "open-mid",
+          "near-open",
+          "open",
+        ];
+        const backnesses = ["front", "central", "back"];
+        cardToPlay.height = heights[Math.floor(Math.random() * heights.length)];
+        cardToPlay.backness =
+          backnesses[Math.floor(Math.random() * backnesses.length)];
+      }
+    }
 
     // Find the actual card in the hand using the same index
     const cardIndex = hand.findIndex(
@@ -174,6 +228,12 @@ function aiMakeDecision(game, aiId) {
         );
       }
 
+      // Handle +2 card effect
+      if (cardToPlay.isPlusTwo) {
+        game.plusTwoCount += 2; // Add 2 to the count
+        console.log(`AI played +2 card! Total to draw: ${game.plusTwoCount}`);
+      }
+
       return {
         action: "play",
         card: cardToPlay,
@@ -195,13 +255,29 @@ function aiMakeDecision(game, aiId) {
     reshuffleDeck(game);
 
     if (game.deck.length > 0) {
-      const drawnCard = game.deck.pop();
-      hand.push(drawnCard);
+      // Handle +2 effect
+      let cardsToDraw = 1;
+      let isPlusTwoDraw = false;
+
+      if (game.plusTwoCount > 0) {
+        cardsToDraw = game.plusTwoCount;
+        isPlusTwoDraw = true;
+        game.plusTwoCount = 0; // Reset the count
+        console.log(`AI ${aiId} drawing ${cardsToDraw} cards due to +2 effect`);
+      }
+
+      // Draw the required number of cards
+      for (let i = 0; i < cardsToDraw && game.deck.length > 0; i++) {
+        const drawnCard = game.deck.pop();
+        hand.push(drawnCard);
+      }
 
       return {
         action: "draw",
-        card: drawnCard,
+        card: null, // Multiple cards drawn, no single card to return
         playerId: aiId,
+        isPlusTwo: isPlusTwoDraw,
+        cardsDrawn: cardsToDraw,
       };
     }
   }
@@ -339,6 +415,12 @@ io.on("connection", (socket) => {
         );
       }
 
+      // Handle +2 card effect
+      if (card.isPlusTwo) {
+        game.plusTwoCount += 2; // Add 2 to the count
+        console.log(`+2 card played! Total to draw: ${game.plusTwoCount}`);
+      }
+
       // Check for win
       if (hand.length === 0) {
         io.to(roomId).emit("gameOver", { winner: socket.id });
@@ -359,6 +441,7 @@ io.on("connection", (socket) => {
         playerId: socket.id,
         turn: game.currentTurn,
         isReverse: card.isReverse,
+        isPlusTwo: card.isPlusTwo,
       });
 
       // Process AI turns
@@ -386,8 +469,22 @@ io.on("connection", (socket) => {
     reshuffleDeck(game);
 
     if (game.deck.length > 0) {
-      const drawnCard = game.deck.pop();
-      game.hands[socket.id].push(drawnCard);
+      // Handle +2 effect
+      let cardsToDraw = 1;
+      let isPlusTwoDraw = false;
+
+      if (game.plusTwoCount > 0) {
+        cardsToDraw = game.plusTwoCount;
+        isPlusTwoDraw = true;
+        game.plusTwoCount = 0; // Reset the count
+        console.log(`Player drawing ${cardsToDraw} cards due to +2 effect`);
+      }
+
+      // Draw the required number of cards
+      for (let i = 0; i < cardsToDraw && game.deck.length > 0; i++) {
+        const drawnCard = game.deck.pop();
+        game.hands[socket.id].push(drawnCard);
+      }
 
       // Move to next turn
       nextTurn(game);
@@ -396,6 +493,8 @@ io.on("connection", (socket) => {
       io.to(roomId).emit("cardDrawn", {
         playerId: socket.id,
         turn: game.currentTurn,
+        isPlusTwo: isPlusTwoDraw,
+        cardsDrawn: cardsToDraw,
       });
 
       // Update human player's hand
@@ -426,78 +525,146 @@ io.on("connection", (socket) => {
 function processAITurns(game, roomId) {
   const processNextAITurn = () => {
     if (game.currentTurn === 0) {
-      // Human player's turn, stop processing
-      console.log("AI processing stopped - human player's turn");
-      return;
-    }
-
-    const aiId = game.aiPlayers[game.currentTurn - 1];
-    console.log(
-      `Processing AI turn: ${aiId}, current turn: ${game.currentTurn}`
-    );
-    const decision = aiMakeDecision(game, aiId);
-    if (aiId === "ai_3") {
-      console.log(`AI 3 decision:`, JSON.stringify(decision));
-    }
-
-    if (decision) {
-      // AI takes 2 seconds to play their card
-      const totalDelay = 2000;
-
-      // Check if AI will say something (30% chance)
-      const aiNames = require("./public/ai-names.js").aiNameList;
-      const aiIndex = parseInt(aiId.split("_")[1]) - 1;
-      const aiName = aiNames[aiIndex] || "Wug";
-      const wugKey = aiName.toLowerCase().replace(/\s+/g, "");
-
-      let phrase = null;
-      if (decision.action === "play") {
-        try {
-          // We'll evaluate the phrase function on the client side
-          phrase = {
-            wugKey: wugKey,
-            card: decision.card,
-            mode: game.mode,
-          };
-        } catch (error) {
-          console.log("Error getting phrase:", error);
+      // Human player's turn
+      if (game.plusTwoCount > 0) {
+        const playerId = game.players[0];
+        let cardsToDraw = game.plusTwoCount;
+        game.plusTwoCount = 0;
+        for (let i = 0; i < cardsToDraw && game.deck.length > 0; i++) {
+          const drawnCard = game.deck.pop();
+          game.hands[playerId].push(drawnCard);
         }
+        io.to(roomId).emit("cardDrawn", {
+          playerId: playerId,
+          turn: game.currentTurn,
+          isPlusTwo: true,
+          cardsDrawn: cardsToDraw,
+        });
+        io.to(playerId).emit("updateHand", {
+          hand: game.hands[playerId],
+        });
+        nextTurn(game);
+        io.to(roomId).emit("turnUpdate", {
+          turn: game.currentTurn,
+        });
+        if (game.currentTurn !== 0) {
+          processNextAITurn();
+        }
+      } else {
+        console.log("AI processing stopped - human player's turn");
+        return;
+      }
+    } else {
+      // AI player's turn
+      const aiId = game.aiPlayers[game.currentTurn - 1];
+      if (game.plusTwoCount > 0) {
+        let cardsToDraw = game.plusTwoCount;
+        game.plusTwoCount = 0;
+        for (let i = 0; i < cardsToDraw && game.deck.length > 0; i++) {
+          const drawnCard = game.deck.pop();
+          game.hands[aiId].push(drawnCard);
+        }
+        io.to(roomId).emit("cardDrawn", {
+          playerId: aiId,
+          turn: game.currentTurn,
+          isPlusTwo: true,
+          cardsDrawn: cardsToDraw,
+        });
+        nextTurn(game);
+        io.to(roomId).emit("turnUpdate", {
+          turn: game.currentTurn,
+        });
+        if (game.currentTurn !== 0) {
+          processNextAITurn();
+        }
+        return;
+      }
+      console.log(
+        `Processing AI turn: ${aiId}, current turn: ${game.currentTurn}`
+      );
+      const decision = aiMakeDecision(game, aiId);
+      if (aiId === "ai_3") {
+        console.log(`AI 3 decision:`, JSON.stringify(decision));
       }
 
-      // Show speech bubble at 2 second mark (if AI will speak)
-      if (phrase) {
-        setTimeout(() => {
-          io.to(roomId).emit("aiThinking", {
-            playerId: aiId,
-            phrase: phrase,
-          });
-        }, 2000);
-      }
+      if (decision) {
+        // AI takes 2 seconds to play their card
+        const totalDelay = 2000;
 
-      // Play the card at 4 second mark
-      setTimeout(() => {
+        // Check if AI will say something (30% chance)
+        const aiNames = require("./public/ai-names.js").aiNameList;
+        const aiIndex = parseInt(aiId.split("_")[1]) - 1;
+        const aiName = aiNames[aiIndex] || "Wug";
+        const wugKey = aiName.toLowerCase().replace(/\s+/g, "");
+
+        let phrase = null;
         if (decision.action === "play") {
-          io.to(roomId).emit("cardPlayed", {
-            card: decision.card,
-            playerId: aiId,
-            turn: game.currentTurn,
-            phrase: phrase,
-            isReverse: decision.card.isReverse,
-          });
-
-          // Check for AI win
-          if (game.hands[aiId].length === 0) {
-            io.to(roomId).emit("gameOver", { winner: aiId });
-            return;
+          try {
+            // We'll evaluate the phrase function on the client side
+            phrase = {
+              wugKey: wugKey,
+              card: decision.card,
+              mode: game.mode,
+            };
+          } catch (error) {
+            console.log("Error getting phrase:", error);
           }
-        } else {
-          io.to(roomId).emit("cardDrawn", {
-            playerId: aiId,
-            turn: game.currentTurn,
-          });
         }
 
-        // Move to next turn
+        // Show speech bubble at 2 second mark (if AI will speak)
+        if (phrase) {
+          setTimeout(() => {
+            io.to(roomId).emit("aiThinking", {
+              playerId: aiId,
+              phrase: phrase,
+            });
+          }, 2000);
+        }
+
+        // Play the card at 4 second mark
+        setTimeout(() => {
+          if (decision.action === "play") {
+            io.to(roomId).emit("cardPlayed", {
+              card: decision.card,
+              playerId: aiId,
+              turn: game.currentTurn,
+              phrase: phrase,
+              isReverse: decision.card.isReverse,
+            });
+
+            // Check for AI win
+            if (game.hands[aiId].length === 0) {
+              io.to(roomId).emit("gameOver", { winner: aiId });
+              return;
+            }
+          } else {
+            io.to(roomId).emit("cardDrawn", {
+              playerId: aiId,
+              turn: game.currentTurn,
+              isPlusTwo: decision.isPlusTwo,
+              cardsDrawn: decision.cardsDrawn,
+            });
+          }
+
+          // Move to next turn
+          nextTurn(game);
+          console.log(`Turn advanced to: ${game.currentTurn}`);
+
+          // Process next AI turn if needed
+          if (game.currentTurn !== 0) {
+            processNextAITurn();
+          } else {
+            console.log("AI processing complete - human player's turn");
+            // Notify human player that it's their turn
+            io.to(roomId).emit("turnUpdate", {
+              turn: game.currentTurn,
+            });
+          }
+        }, 2000); // 2 second delay for AI to play their card
+      } else {
+        // AI can't make a decision (no playable cards and deck is empty)
+        // Skip this AI's turn and move to next player
+        console.log(`AI ${aiId} can't make a decision, skipping turn`);
         nextTurn(game);
         console.log(`Turn advanced to: ${game.currentTurn}`);
 
@@ -511,23 +678,6 @@ function processAITurns(game, roomId) {
             turn: game.currentTurn,
           });
         }
-      }, 2000); // 2 second delay for AI to play their card
-    } else {
-      // AI can't make a decision (no playable cards and deck is empty)
-      // Skip this AI's turn and move to next player
-      console.log(`AI ${aiId} can't make a decision, skipping turn`);
-      nextTurn(game);
-      console.log(`Turn advanced to: ${game.currentTurn}`);
-
-      // Process next AI turn if needed
-      if (game.currentTurn !== 0) {
-        processNextAITurn();
-      } else {
-        console.log("AI processing complete - human player's turn");
-        // Notify human player that it's their turn
-        io.to(roomId).emit("turnUpdate", {
-          turn: game.currentTurn,
-        });
       }
     }
   };

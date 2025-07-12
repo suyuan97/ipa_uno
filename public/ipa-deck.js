@@ -60,8 +60,20 @@ const consonantDeck = [
   { symbol: "↺", place: "reverse", manner: "reverse", isReverse: true },
   { symbol: "↺", place: "reverse", manner: "reverse", isReverse: true },
   { symbol: "↺", place: "reverse", manner: "reverse", isReverse: true },
+  { symbol: "↺", place: "reverse", manner: "reverse", isReverse: true },
+  { symbol: "↺", place: "reverse", manner: "reverse", isReverse: true },
   // Change (change articulation) card
   { symbol: "🪄", place: "change", manner: "change", isChange: true },
+  { symbol: "🪄", place: "change", manner: "change", isChange: true },
+  { symbol: "🪄", place: "change", manner: "change", isChange: true },
+  { symbol: "🪄", place: "change", manner: "change", isChange: true },
+  { symbol: "🪄", place: "change", manner: "change", isChange: true },
+  // +2 cards
+  { symbol: "+2", place: "plusTwo", manner: "plusTwo", isPlusTwo: true },
+  { symbol: "+2", place: "plusTwo", manner: "plusTwo", isPlusTwo: true },
+  { symbol: "+2", place: "plusTwo", manner: "plusTwo", isPlusTwo: true },
+  { symbol: "+2", place: "plusTwo", manner: "plusTwo", isPlusTwo: true },
+  { symbol: "+2", place: "plusTwo", manner: "plusTwo", isPlusTwo: true },
 ];
 
 const vowelDeck = [
@@ -95,9 +107,12 @@ const vowelDeck = [
   // Reverse cards
   { symbol: "↺", height: "reverse", backness: "reverse", isReverse: true },
   { symbol: "↺", height: "reverse", backness: "reverse", isReverse: true },
-  { symbol: "↺", height: "reverse", backness: "reverse", isReverse: true },
   // Change (change articulation) card
   { symbol: "🪄", height: "change", backness: "change", isChange: true },
+  { symbol: "🪄", height: "change", backness: "change", isChange: true },
+  // +2 cards
+  { symbol: "+2", height: "plusTwo", backness: "plusTwo", isPlusTwo: true },
+  { symbol: "+2", height: "plusTwo", backness: "plusTwo", isPlusTwo: true },
 ];
 
 // Make available for both browser and Node.js
