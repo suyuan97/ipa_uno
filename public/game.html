@@ -136,19 +136,19 @@
       }
 
       .reverse {
-        background: linear-gradient(135deg, #ff5722, #e91e63) !important;
-        border-color: #d32f2f !important;
-        color: white !important;
+        background: #fff9c4 !important;
+        border-color: #fbc02d !important;
+        color: #333 !important;
         font-weight: bold !important;
-        animation: reverse-glow 2s ease-in-out infinite alternate;
+        box-shadow: 0 2px 12px #fbc02d33;
       }
 
       .plus-two {
-        background: linear-gradient(135deg, #f44336, #d32f2f) !important;
+        background: #e57373 !important;
         border-color: #b71c1c !important;
         color: white !important;
         font-weight: bold !important;
-        animation: plus-two-glow 2s ease-in-out infinite alternate;
+        box-shadow: 0 2px 12px #b71c1c33;
       }
 
       @keyframes reverse-glow {
@@ -619,6 +619,21 @@
       #changeModal button:hover {
         background: #2196f3;
       }
+      .skip {
+        background: #eeeeee !important;
+        border-color: #616161 !important;
+        color: white !important;
+        font-weight: bold !important;
+        box-shadow: 0 2px 12px #42424233;
+      }
+      @keyframes skip-glow {
+        from {
+          box-shadow: 0 0 5px #ff5252;
+        }
+        to {
+          box-shadow: 0 0 20px #ffb300, 0 0 30px #ff5252;
+        }
+      }
     </style>
   </head>
   <body>
@@ -866,6 +881,8 @@
             message = `You played ${data.card.symbol} (+2!)`;
           } else if (data.isReverse) {
             message = `You played ${data.card.symbol} (REVERSE!)`;
+          } else if (data.card.isSkip) {
+            message = `You played ${data.card.symbol} (SKIP!)`;
           } else {
             message = `You played ${data.card.symbol}`;
           }
@@ -911,6 +928,24 @@
           } else if (data.isReverse) {
             message = `${aiName} played ${data.card.symbol} (REVERSE!)`;
             addLogEntry(message, "ai");
+          } else if (data.card.isSkip) {
+            message = `${aiName} played ${data.card.symbol} (SKIP!)`;
+            addLogEntry(message, "ai");
+            if (typeof getAISkipPhrase === "function") {
+              // Figure out which AI is being skipped
+              let skippedIndex;
+              if (gameDirection === 1) {
+                skippedIndex = (aiIndex + 1) % 3;
+              } else {
+                skippedIndex = (aiIndex + 2) % 3;
+              }
+              const skippedName = aiNames[skippedIndex] || "Wug";
+              showSpeechBubble(skippedIndex + 1, getAISkipPhrase(skippedName));
+              addLogEntry(
+                `${skippedName}: "${getAISkipPhrase(skippedName)}"`,
+                "ai-phrase"
+              );
+            }
           } else {
             message = `${aiName} played ${data.card.symbol}`;
             addLogEntry(message, "ai");
@@ -1160,7 +1195,8 @@
             !card.isPlusTwo &&
             !card.isPlusFour &&
             !card.isReverse &&
-            !card.isChange
+            !card.isChange &&
+            !card.isSkip
           ) {
             div.innerHTML += `<span class="card-label">${
               currentMode === "consonant"
@@ -1182,6 +1218,11 @@
           // Add plus-four class if it's a +4 card
           if (card.isPlusFour) {
             div.classList.add("plus-four");
+          }
+
+          // Add skip class if it's a skip card
+          if (card.isSkip) {
+            div.classList.add("skip");
           }
 
           if (isMatch(card, pileCard)) {
@@ -1244,7 +1285,8 @@
             !pileCard.isPlusTwo &&
             !pileCard.isPlusFour &&
             !pileCard.isReverse &&
-            !pileCard.isChange
+            !pileCard.isChange &&
+            !pileCard.isSkip
           ) {
             div.innerHTML += `<span class="card-label">${
               currentMode === "consonant"
@@ -1266,6 +1308,11 @@
           // Add plus-four class if it's a +4 card
           if (pileCard.isPlusFour) {
             div.classList.add("plus-four");
+          }
+
+          // Add skip class if it's a skip card
+          if (pileCard.isSkip) {
+            div.classList.add("skip");
           }
 
           pileDiv.appendChild(div);
@@ -1589,6 +1636,8 @@
         if (card.isPlusTwo || pileCard.isPlusTwo) return true;
         // Reverse cards can be played on any card
         if (card.isReverse || pileCard.isReverse) return true;
+        // Skip cards can be played on any card, and any card can be played on a skip card
+        if (card.isSkip || pileCard.isSkip) return true;
         return card.place === pileCard.place || card.manner === pileCard.manner;
       }
 

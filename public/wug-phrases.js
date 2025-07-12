@@ -441,3 +441,16 @@ function getAIPlusFourPhrase(wugName) {
     wugName.charAt(0).toUpperCase() + wugName.slice(1).toLowerCase();
   return getRandomPhrase(normalized, "plusFour");
 }
+
+function getAISkipPhrase(aiName) {
+  switch (aiName) {
+    case "Bibi":
+      return "No fair!";
+    case "Sass":
+      return "You can't stop me!";
+    case "Mimi":
+      return "Oh no, skipped!";
+    default:
+      return "Skipped!";
+  }
+}

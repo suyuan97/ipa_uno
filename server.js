@@ -97,7 +97,8 @@ function dealGame(game, playerIds, mode = "consonant") {
     (pileCard.isReverse ||
       pileCard.isChange ||
       pileCard.isPlusTwo ||
-      pileCard.isPlusFour)
+      pileCard.isPlusFour ||
+      pileCard.isSkip)
   ) {
     game.deck.unshift(pileCard); // Put it back at the bottom
     shuffle(game.deck);
@@ -114,9 +115,17 @@ function isMatch(cardA, cardB, mode) {
   // Functional cards can always be played on a change card, and vice versa
   if (
     (cardA.isChange &&
-      (cardB.isPlusTwo || cardB.isPlusFour || cardB.isReverse)) ||
-    (cardB.isChange && (cardA.isPlusTwo || cardA.isPlusFour || cardA.isReverse))
+      (cardB.isPlusTwo ||
+        cardB.isPlusFour ||
+        cardB.isReverse ||
+        cardB.isSkip)) ||
+    (cardB.isChange &&
+      (cardA.isPlusTwo || cardA.isPlusFour || cardA.isReverse || cardA.isSkip))
   ) {
+    return true;
+  }
+  // Skip cards can be played on any card, and any card can be played on a skip card
+  if (cardA.isSkip || cardB.isSkip) {
     return true;
   }
   // Change cards can be played on any card, and any card can be played on a change card
@@ -291,6 +300,11 @@ function aiMakeDecision(game, aiId) {
       if (cardToPlay.isPlusFour) {
         game.plusTwoCount += 4; // Add 4 to the count
         console.log(`AI played +4 card! Total to draw: ${game.plusTwoCount}`);
+      }
+
+      // Handle skip card effect
+      if (cardToPlay.isSkip) {
+        nextTurn(game); // Skip the next player
       }
 
       return {
@@ -486,6 +500,11 @@ io.on("connection", (socket) => {
         console.log(`+4 card played! Total to draw: ${game.plusTwoCount}`);
       }
 
+      // Handle skip card effect
+      if (card.isSkip) {
+        nextTurn(game); // Skip the next player
+      }
+
       // Check for win
       if (hand.length === 0) {
         io.to(roomId).emit("gameOver", { winner: socket.id });
@@ -508,6 +527,7 @@ io.on("connection", (socket) => {
         isReverse: card.isReverse,
         isPlusTwo: card.isPlusTwo,
         isPlusFour: card.isPlusFour,
+        isSkip: card.isSkip,
       });
 
       // Process AI turns
