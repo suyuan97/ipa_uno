@@ -1,0 +1,664 @@
+<!-- File: game.html -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IPA UNO - Game</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        background: #fff;
+        margin: 0;
+        padding: 0;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      .game-container {
+        width: 100vw;
+        height: 100vh;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* Remove the header panel */
+      .game-header {
+        display: none !important;
+      }
+
+      .game-board {
+        flex: 1 1 auto;
+        height: auto;
+        position: relative;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .human-player {
+        position: relative;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        text-align: center;
+        background: #f6faff;
+        padding: 15px 0 10px 0;
+        box-shadow: 0 -4px 16px rgba(125, 182, 232, 0.12);
+        border: none;
+        transition: box-shadow 0.3s;
+        z-index: 10;
+      }
+      .human-player.active {
+        box-shadow: 0 -4px 24px 0 rgba(125, 182, 232, 0.25);
+        background: rgba(125, 182, 232, 0.08);
+      }
+
+      .pile-center {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 5;
+      }
+
+      .card {
+        display: inline-block;
+        margin: 5px;
+        padding: 15px 20px;
+        border: 2px solid #444;
+        border-radius: 12px;
+        cursor: default;
+        font-size: 1.5rem;
+        min-width: 60px;
+        max-width: 80px;
+        background-color: white;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      }
+
+      .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+      }
+
+      .card-label {
+        display: block;
+        font-size: 0.7rem;
+        margin-top: 5px;
+      }
+
+      .hint {
+        background-color: yellow !important;
+      }
+
+      .ai-player {
+        position: absolute;
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 10px;
+        border: 2px solid #ccc;
+        text-align: center;
+        min-width: 120px;
+      }
+
+      .ai-player h3 {
+        margin: 0 0 10px 0;
+        font-size: 1rem;
+      }
+
+      .ai-cards {
+        display: flex;
+        justify-content: center;
+        gap: 3px;
+        flex-wrap: wrap;
+      }
+
+      .ai-card {
+        width: 30px;
+        height: 45px;
+        background: #2196f3;
+        border: 2px solid #1976d2;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.9rem;
+        font-weight: bold;
+        transition: all 0.3s ease;
+      }
+
+      .ai-card.back {
+        background: #7db6e8 url("wug.png") center center/contain no-repeat;
+        border-color: #7db6e8;
+      }
+
+      .ai-card.played {
+        opacity: 0.3;
+        transform: scale(0.8);
+      }
+
+      /* AI Player Positions */
+      .ai-player.ai-1 {
+        left: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+
+      .ai-player.ai-2 {
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+
+      .ai-player.ai-3 {
+        right: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+
+      .human-player {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        text-align: center;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 15px;
+        border-top: 2px solid #4caf50;
+      }
+
+      .human-player h2 {
+        margin: 0 0 10px 0;
+        font-size: 1.2rem;
+      }
+
+      .hand {
+        display: flex;
+        justify-content: center;
+        gap: 5px;
+        flex-wrap: wrap;
+        max-height: 120px;
+        overflow-y: auto;
+        width: 100%;
+        padding: 0 20px;
+      }
+
+      .action-buttons {
+        margin-top: 10px;
+        text-align: center;
+      }
+
+      button {
+        margin: 5px;
+        padding: 8px 16px;
+        font-size: 0.9rem;
+        cursor: pointer;
+        border: none;
+        border-radius: 5px;
+        background: #7db6e8;
+        color: white;
+        transition: background 0.3s;
+      }
+
+      button:hover {
+        background: #5a9ed6;
+      }
+
+      button:disabled {
+        background: #cccccc;
+        cursor: not-allowed;
+      }
+
+      #hintMessage {
+        color: red;
+        font-weight: bold;
+        margin-top: 5px;
+        font-size: 0.8rem;
+      }
+
+      .action-log {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        width: 250px;
+        max-height: 200px;
+        overflow-y: auto;
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 10px;
+        font-size: 0.8rem;
+        z-index: 10;
+      }
+
+      .log-entry {
+        margin: 3px 0;
+        padding: 3px;
+        border-radius: 3px;
+        font-size: 0.75rem;
+      }
+
+      .log-entry.ai {
+        background: #e3f2fd;
+      }
+
+      .log-entry.player {
+        background: #f3e5f5;
+      }
+
+      .log-entry.system {
+        background: #fff3cd;
+      }
+
+      .log-entry.error {
+        background: #ffebee;
+        color: #c62828;
+      }
+      /* Ensure highlight always applies */
+      .ai-player.ai-1.active,
+      .ai-player.ai-2.active,
+      .ai-player.ai-3.active {
+        border-color: #7db6e8 !important;
+        background: rgba(125, 182, 232, 0.15) !important;
+        box-shadow: 0 0 15px rgba(125, 182, 232, 0.3) !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="game-container">
+      <div
+        id="turnIndicator"
+        style="
+          margin: 0 auto;
+          width: fit-content;
+          font-weight: bold;
+          font-size: 1.2rem;
+        "
+      ></div>
+      <div class="game-board">
+        <!-- Center Pile -->
+        <div class="pile-center" id="pile"></div>
+
+        <!-- AI Players -->
+        <div class="ai-player ai-1" id="ai1">
+          <h3>AI 1</h3>
+          <div class="ai-cards" id="ai1Cards"></div>
+        </div>
+
+        <div class="ai-player ai-2" id="ai2">
+          <h3>AI 2</h3>
+          <div class="ai-cards" id="ai2Cards"></div>
+        </div>
+
+        <div class="ai-player ai-3" id="ai3">
+          <h3>AI 3</h3>
+          <div class="ai-cards" id="ai3Cards"></div>
+        </div>
+      </div>
+
+      <!-- Human Player moved outside game-board -->
+      <div class="human-player" id="humanBox">
+        <h2>Your Hand</h2>
+        <div class="hand" id="hand"></div>
+        <div class="action-buttons">
+          <button onclick="drawCard()" id="drawButton">Draw Card</button>
+          <button onclick="showHint()" id="hintButton">
+            Hint (<span id="hintCount">5</span> left)
+          </button>
+          <button onclick="window.location.href='index.html'">
+            Return to Homepage
+          </button>
+        </div>
+        <div id="hintMessage"></div>
+      </div>
+      <!-- Action Log -->
+      <div class="action-log" id="actionLog"></div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="ipa-deck.js"></script>
+    <script src="ai-names.js"></script>
+    <script>
+      const socket = io();
+      const urlParams = new URLSearchParams(window.location.search);
+      const currentMode = urlParams.get("mode") || "consonant";
+      const currentDifficulty = urlParams.get("difficulty") || "easy";
+
+      let hand = [];
+      let pileCard = null;
+      let hintRemaining = 5;
+      let currentTurn = 0;
+      let aiPlayers = [];
+      let isMyTurn = false;
+      let isPlaying = false;
+      let gameStarted = false;
+
+      // Track AI card counts
+      let aiCardCounts = { ai_1: 7, ai_2: 7, ai_3: 7 };
+
+      // Use aiNameList from ai-names.js for AI names
+      let aiNames = [];
+
+      // Join a game room
+      const roomId = "room1";
+      socket.emit("joinGame", roomId, currentMode, currentDifficulty);
+
+      socket.on("startGame", (data) => {
+        console.log("Game started:", data);
+        hand = data.hand;
+        pileCard = data.pileCard;
+        aiPlayers = data.aiPlayers;
+        currentTurn = data.turn;
+        gameStarted = true;
+
+        isMyTurn = currentTurn === 0;
+        isPlaying = false;
+        // Assign AI names from aiNameList (shuffle if more than 3)
+        if (window.aiNameList && window.aiNameList.length >= 3) {
+          const shuffled = window.aiNameList
+            .slice()
+            .sort(() => 0.5 - Math.random());
+          aiNames = [shuffled[0], shuffled[1], shuffled[2]];
+        } else {
+          aiNames = ["Wug", "Another wug", "A third wug"];
+        }
+        render();
+        updateTurnIndicator();
+        addLogEntry(
+          "Game started! You are playing against 3 AI opponents.",
+          "system"
+        );
+      });
+
+      socket.on("cardPlayed", (data) => {
+        console.log("Card played:", data);
+        pileCard = data.card;
+
+        if (data.playerId === socket.id) {
+          addLogEntry(`You played ${data.card.symbol}`, "player");
+        } else {
+          addLogEntry(`AI ${data.playerId} played ${data.card.symbol}`, "ai");
+          // Update AI card count
+          aiCardCounts[data.playerId]--;
+          console.log(
+            `Updated ${data.playerId} card count to:`,
+            aiCardCounts[data.playerId]
+          );
+        }
+
+        currentTurn = data.turn;
+        isMyTurn = currentTurn === 0;
+        isPlaying = false;
+        render();
+        updateTurnIndicator();
+      });
+
+      socket.on("cardDrawn", (data) => {
+        console.log("Card drawn:", data);
+
+        if (data.playerId === socket.id) {
+          addLogEntry("You drew a card", "player");
+        } else {
+          addLogEntry(`AI ${data.playerId} drew a card`, "ai");
+          // Update AI card count
+          aiCardCounts[data.playerId]++;
+        }
+
+        currentTurn = data.turn;
+        isMyTurn = currentTurn === 0;
+        isPlaying = false;
+        render();
+        updateTurnIndicator();
+        // drawButton will be re-enabled in render() if isMyTurn
+      });
+
+      socket.on("updateHand", (data) => {
+        console.log("Hand updated:", data.hand);
+        hand = data.hand;
+        render();
+      });
+
+      socket.on("turnUpdate", (data) => {
+        console.log("Turn updated:", data);
+        currentTurn = data.turn;
+        isMyTurn = currentTurn === 0;
+        isPlaying = false;
+        updateTurnIndicator();
+        render();
+      });
+
+      socket.on("gameOver", (data) => {
+        const winner = data.winner === socket.id ? "You" : `AI ${data.winner}`;
+        addLogEntry(`Game Over! ${winner} won!`, "system");
+        document.getElementById(
+          "gameStatus"
+        ).textContent = `Game Over! ${winner} won!`;
+        document.getElementById("drawButton").disabled = true;
+        document.getElementById("hintButton").disabled = true;
+      });
+
+      socket.on("error", (data) => {
+        addLogEntry(`Error: ${data.message}`, "error");
+      });
+
+      function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [array[i], array[j]] = [array[j], array[i]];
+        }
+      }
+
+      function render(showHints = false) {
+        renderHand(showHints);
+        renderPile();
+        renderAIPlayers();
+        // Re-enable draw button if it was disabled and it's my turn
+        if (document.getElementById("drawButton").disabled && isMyTurn) {
+          document.getElementById("drawButton").disabled = false;
+        }
+        // Re-enable hint button if it was disabled, it's my turn, and hints remain
+        if (
+          document.getElementById("hintButton").disabled &&
+          isMyTurn &&
+          hintRemaining > 0
+        ) {
+          document.getElementById("hintButton").disabled = false;
+        }
+      }
+
+      function renderHand(showHints = false) {
+        console.log("renderHand", isMyTurn, currentTurn);
+
+        const handDiv = document.getElementById("hand");
+        const hintMessage = document.getElementById("hintMessage");
+        const hintCount = document.getElementById("hintCount");
+        handDiv.innerHTML = "";
+        hintMessage.textContent = "";
+        let anyHints = false;
+
+        if (hand.length === 0) {
+          const loadingDiv = document.createElement("div");
+          loadingDiv.innerHTML = "<p>Loading cards...</p>";
+          handDiv.appendChild(loadingDiv);
+          return;
+        }
+
+        hand.forEach((card, index) => {
+          const div = document.createElement("div");
+          div.className = "card";
+          div.innerHTML = `<div>${card.symbol}</div>`;
+          if (currentDifficulty === "easy") {
+            div.innerHTML += `<span class="card-label">${
+              currentMode === "consonant"
+                ? card.place + ", " + card.manner
+                : card.height + ", " + card.backness
+            }</span>`;
+          }
+          if (showHints && isMatch(card, pileCard)) {
+            div.classList.add("hint");
+            anyHints = true;
+          }
+          if (isMyTurn) {
+            div.onclick = () => playCard(index);
+          }
+          handDiv.appendChild(div);
+        });
+
+        if (showHints && !anyHints) {
+          hintMessage.textContent = "No playable cards. Please draw a new one.";
+        }
+        hintCount.textContent = hintRemaining;
+      }
+
+      function renderPile() {
+        const pileDiv = document.getElementById("pile");
+        pileDiv.innerHTML = "";
+
+        if (pileCard) {
+          const div = document.createElement("div");
+          div.className = "card";
+          div.innerHTML = `<div>${pileCard.symbol}</div>`;
+          if (currentDifficulty === "easy") {
+            div.innerHTML += `<span class="card-label">${
+              currentMode === "consonant"
+                ? pileCard.place + ", " + pileCard.manner
+                : pileCard.height + ", " + pileCard.backness
+            }</span>`;
+          }
+          pileDiv.appendChild(div);
+        }
+      }
+
+      function renderAIPlayers() {
+        console.log("renderAIPlayers: currentTurn =", currentTurn);
+        // Update AI 1 (left)
+        const ai1 = document.getElementById("ai1");
+        const ai1Cards = document.getElementById("ai1Cards");
+        ai1Cards.innerHTML = "";
+        for (let i = 0; i < aiCardCounts.ai_1; i++) {
+          const cardDiv = document.createElement("div");
+          cardDiv.className = "ai-card back";
+          // No question mark, just the Wug image
+          ai1Cards.appendChild(cardDiv);
+        }
+        ai1.querySelector("h3").textContent = aiNames[0] || "Wug";
+        // Update AI 2 (top)
+        const ai2 = document.getElementById("ai2");
+        const ai2Cards = document.getElementById("ai2Cards");
+        ai2Cards.innerHTML = "";
+        for (let i = 0; i < aiCardCounts.ai_2; i++) {
+          const cardDiv = document.createElement("div");
+          cardDiv.className = "ai-card back";
+          // No question mark, just the Wug image
+          ai2Cards.appendChild(cardDiv);
+        }
+        ai2.querySelector("h3").textContent = aiNames[1] || "Another wug";
+        // Update AI 3 (right)
+        const ai3 = document.getElementById("ai3");
+        const ai3Cards = document.getElementById("ai3Cards");
+        ai3Cards.innerHTML = "";
+        for (let i = 0; i < aiCardCounts.ai_3; i++) {
+          const cardDiv = document.createElement("div");
+          cardDiv.className = "ai-card back";
+          // No question mark, just the Wug image
+          ai3Cards.appendChild(cardDiv);
+        }
+        ai3.querySelector("h3").textContent = aiNames[2] || "A third wug";
+        // Update active states
+        ai1.className = "ai-player ai-1" + (currentTurn === 1 ? " active" : "");
+        ai2.className = "ai-player ai-2" + (currentTurn === 2 ? " active" : "");
+        ai3.className = "ai-player ai-3" + (currentTurn === 3 ? " active" : "");
+        if (currentTurn === 1) console.log("AI 1 highlighted");
+        if (currentTurn === 2) console.log("AI 2 highlighted");
+        if (currentTurn === 3) {
+          console.log("AI 3 highlighted");
+          console.log("AI 3 className:", ai3.className);
+          console.log("AI 3 card count:", aiCardCounts.ai_3);
+        }
+        // Human highlight
+        const humanBox = document.getElementById("humanBox");
+        humanBox.className = `human-player${
+          currentTurn === 0 ? " active" : ""
+        }`;
+      }
+
+      function updateTurnIndicator() {
+        const turnIndicator = document.getElementById("turnIndicator");
+        if (isMyTurn) {
+          turnIndicator.textContent = "Your turn!";
+          turnIndicator.style.background = "#d4edda";
+          turnIndicator.style.borderColor = "#c3e6cb";
+        } else {
+          const aiIndex = currentTurn - 1;
+          turnIndicator.textContent = `AI ${aiIndex + 1}'s turn...`;
+          turnIndicator.style.background = "#fff3cd";
+          turnIndicator.style.borderColor = "#ffeaa7";
+        }
+      }
+
+      function addLogEntry(message, type) {
+        const logDiv = document.getElementById("actionLog");
+        const entry = document.createElement("div");
+        entry.className = `log-entry ${type}`;
+        entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        logDiv.appendChild(entry);
+        logDiv.scrollTop = logDiv.scrollHeight;
+      }
+
+      function playCard(index) {
+        if (!isMyTurn || isPlaying) {
+          addLogEntry("Not your turn!", "error");
+          return;
+        }
+        isPlaying = true;
+        isMyTurn = false; // Immediately prevent further plays
+        document.getElementById("drawButton").disabled = true;
+        document.getElementById("hintButton").disabled = true;
+        render(); // This will re-render the hand with no click handlers
+
+        const card = hand[index];
+        if (isMatch(card, pileCard)) {
+          socket.emit("playCard", { roomId, cardIndex: index });
+        } else {
+          addLogEntry("Card does not match!", "error");
+        }
+      }
+
+      function drawCard() {
+        if (!isMyTurn) {
+          addLogEntry("Not your turn!", "error");
+          return;
+        }
+        document.getElementById("drawButton").disabled = true;
+        document.getElementById("hintButton").disabled = true;
+        isMyTurn = false;
+        socket.emit("drawCard", { roomId });
+      }
+
+      function showHint() {
+        if (!isMyTurn || hintRemaining <= 0) return;
+        socket.emit("showHint");
+        hintRemaining--;
+        document.getElementById(
+          "hintButton"
+        ).textContent = `Hint (${hintRemaining} left)`;
+        addLogEntry("You used a hint", "player");
+        render();
+      }
+
+      function isMatch(card, pileCard) {
+        if (!pileCard) return true; // If no pile card, any card is playable
+        if (card.symbol === pileCard.symbol) return true;
+        if (card.symbol === "W" && pileCard.symbol === "U") return true;
+        if (card.symbol === "U" && pileCard.symbol === "W") return true;
+        return card.place === pileCard.place || card.manner === pileCard.manner;
+      }
+
+      // Initial render to set up the game board and hand
+      render();
+    </script>
+  </body>
+</html>
