@@ -290,25 +290,7 @@ function aiMakeDecision(game, aiId) {
         );
       }
 
-      // Handle +2 card effect
-      if (cardToPlay.isPlusTwo) {
-        if (game.plusTwoCount > 0) {
-          game.plusTwoCount += 2;
-        } else {
-          game.plusTwoCount = 2;
-        }
-        console.log(`AI played +2 card! Total to draw: ${game.plusTwoCount}`);
-      }
-
-      // Handle +4 card effect
-      if (cardToPlay.isPlusFour) {
-        if (game.plusTwoCount > 0) {
-          game.plusTwoCount += 4;
-        } else {
-          game.plusTwoCount = 4;
-        }
-        console.log(`AI played +4 card! Total to draw: ${game.plusTwoCount}`);
-      }
+      // Note: +2/+4 effects are handled when the card is actually played, not when the decision is made
 
       // Handle skip card effect
       if (cardToPlay.isSkip) {
@@ -553,6 +535,67 @@ io.on("connection", (socket) => {
     }
   });
 
+  // Handle human player starting their turn with plusTwoCount > 0
+  socket.on("startTurn", (data) => {
+    const { roomId } = data;
+    const game = games[roomId];
+
+    console.log(
+      `startTurn event received for room ${roomId}, currentTurn: ${game?.currentTurn}, plusTwoCount: ${game?.plusTwoCount}`
+    );
+
+    if (!game || game.currentTurn !== 0) {
+      console.log("startTurn: Not human player's turn or no game");
+      return;
+    }
+
+    // Check if human player needs to draw due to +2/+4
+    if (game.plusTwoCount > 0) {
+      console.log(
+        `startTurn: Human player needs to draw ${game.plusTwoCount} cards`
+      );
+      const playerId = socket.id;
+      let cardsToDraw = game.plusTwoCount;
+      // Determine if the draw is due to a +4 (or stacked +4)
+      const isPlusFourDraw =
+        !!game.lastPlayedCard && game.lastPlayedCard.isPlusFour;
+      game.plusTwoCount = 0;
+
+      // Draw the cards
+      for (let i = 0; i < cardsToDraw && game.deck.length > 0; i++) {
+        const drawnCard = game.deck.pop();
+        game.hands[playerId].push(drawnCard);
+      }
+
+      console.log(`startTurn: Human player drew ${cardsToDraw} cards`);
+
+      // Emit card drawn event
+      io.to(roomId).emit("cardDrawn", {
+        playerId: playerId,
+        turn: game.currentTurn,
+        isPlusTwo: !isPlusFourDraw,
+        isPlusFour: isPlusFourDraw,
+        cardsDrawn: cardsToDraw,
+      });
+
+      // Update human player's hand
+      io.to(playerId).emit("updateHand", {
+        hand: game.hands[playerId],
+      });
+
+      // Skip human player's turn after drawing
+      nextTurn(game);
+      io.to(roomId).emit("turnUpdate", {
+        turn: game.currentTurn,
+      });
+
+      // Process AI turns
+      processAITurns(game, roomId);
+    } else {
+      console.log("startTurn: Human player doesn't need to draw");
+    }
+  });
+
   socket.on("drawCard", (data) => {
     const { roomId } = data;
     const game = games[roomId];
@@ -628,6 +671,9 @@ function processAITurns(game, roomId) {
   const processNextAITurn = () => {
     if (game.currentTurn === 0) {
       // Human player's turn
+      console.log(
+        `processAITurns: Human player's turn, plusTwoCount: ${game.plusTwoCount}`
+      );
       if (game.plusTwoCount > 0) {
         const playerId = game.players[0];
         let cardsToDraw = game.plusTwoCount;
@@ -668,6 +714,7 @@ function processAITurns(game, roomId) {
     // AI player's turn
     const aiId = game.aiPlayers[game.currentTurn - 1];
     if (game.plusTwoCount > 0) {
+      console.log(`[DEBUG] AI ${aiId} turn: plusTwoCount=${game.plusTwoCount}`);
       let cardsToDraw = game.plusTwoCount;
       // Determine if the draw is due to a +4 (or stacked +4)
       const isPlusFourDraw =
@@ -697,6 +744,9 @@ function processAITurns(game, roomId) {
         });
         // After 1s, draw the cards and emit cardDrawn
         setTimeout(() => {
+          console.log(
+            `[DEBUG] AI ${aiId} drawing ${cardsToDraw} cards due to +2/+4`
+          );
           for (let i = 0; i < cardsToDraw && game.deck.length > 0; i++) {
             const drawnCard = game.deck.pop();
             game.hands[game.aiPlayers[game.currentTurn - 1]].push(drawnCard);
@@ -708,45 +758,15 @@ function processAITurns(game, roomId) {
             isPlusFour: isPlusFourDraw,
             cardsDrawn: cardsToDraw,
           });
+          // Skip this AI's turn after drawing +2/+4 cards
           nextTurn(game);
           io.to(roomId).emit("turnUpdate", {
             turn: game.currentTurn,
           });
-          // After skipping, check again if the next player is human and plusTwoCount > 0
-          if (game.currentTurn === 0 && game.plusTwoCount > 0) {
-            processNextAITurn();
-          } else if (game.currentTurn !== 0) {
-            processNextAITurn();
-          }
+          // After drawing +2/+4 cards, continue processing turns
+          processNextAITurn();
+          return;
         }, 1000);
-        return;
-      } else {
-        // Human's turn: draw immediately, no phrase
-        const playerId = game.players[0];
-        for (let i = 0; i < cardsToDraw && game.deck.length > 0; i++) {
-          const drawnCard = game.deck.pop();
-          game.hands[playerId].push(drawnCard);
-        }
-        io.to(roomId).emit("cardDrawn", {
-          playerId: playerId,
-          turn: game.currentTurn,
-          isPlusTwo: !isPlusFourDraw,
-          isPlusFour: isPlusFourDraw,
-          cardsDrawn: cardsToDraw,
-        });
-        io.to(playerId).emit("updateHand", {
-          hand: game.hands[playerId],
-        });
-        nextTurn(game);
-        io.to(roomId).emit("turnUpdate", {
-          turn: game.currentTurn,
-        });
-        // After skipping, check again if the next player is human and plusTwoCount > 0
-        if (game.currentTurn === 0 && game.plusTwoCount > 0) {
-          processNextAITurn();
-        } else if (game.currentTurn !== 0) {
-          processNextAITurn();
-        }
         return;
       }
     }
@@ -789,12 +809,79 @@ function processAITurns(game, roomId) {
             playerId: aiId,
             phrase: phrase,
           });
-        }, 2000);
+        }, 4000); // 4 seconds
       }
 
       // Play the card at 2 second mark
       setTimeout(() => {
         if (decision.action === "play") {
+          // Update the pile card and hand
+          game.pileCard = decision.card;
+          game.lastPlayedCard = decision.card;
+          game.lastPlayerId = aiId;
+
+          // Handle +2 card effect
+          if (decision.card.isPlusTwo) {
+            if (game.plusTwoCount > 0) {
+              game.plusTwoCount += 2;
+            } else {
+              game.plusTwoCount = 2;
+            }
+            console.log(
+              `AI played +2 card! Total to draw: ${game.plusTwoCount}`
+            );
+            console.log(
+              `[DEBUG] New pile card:`,
+              JSON.stringify(game.pileCard)
+            );
+            // Advance turn and process next turn immediately
+            nextTurn(game);
+            io.to(roomId).emit("cardPlayed", {
+              card: decision.card,
+              playerId: aiId,
+              turn: game.currentTurn,
+              phrase: phrase,
+              isReverse: decision.card.isReverse,
+              isPlusTwo: decision.card.isPlusTwo,
+              isPlusFour: decision.card.isPlusFour,
+            });
+            io.to(roomId).emit("turnUpdate", { turn: game.currentTurn });
+            processNextAITurn();
+            return;
+          }
+
+          // Handle +4 card effect
+          if (decision.card.isPlusFour) {
+            if (game.plusTwoCount > 0) {
+              game.plusTwoCount += 4;
+            } else {
+              game.plusTwoCount = 4;
+            }
+            console.log(
+              `AI played +4 card! Total to draw: ${game.plusTwoCount}`
+            );
+            console.log(
+              `[DEBUG] New pile card:`,
+              JSON.stringify(game.pileCard)
+            );
+            // Advance turn and process next turn immediately
+            nextTurn(game);
+            io.to(roomId).emit("cardPlayed", {
+              card: decision.card,
+              playerId: aiId,
+              turn: game.currentTurn,
+              phrase: phrase,
+              isReverse: decision.card.isReverse,
+              isPlusTwo: decision.card.isPlusTwo,
+              isPlusFour: decision.card.isPlusFour,
+            });
+            io.to(roomId).emit("turnUpdate", { turn: game.currentTurn });
+            processNextAITurn();
+            return;
+          }
+
+          // For all other cards, update the pile and log
+          console.log(`[DEBUG] New pile card:`, JSON.stringify(game.pileCard));
           io.to(roomId).emit("cardPlayed", {
             card: decision.card,
             playerId: aiId,
@@ -811,85 +898,9 @@ function processAITurns(game, roomId) {
             return;
           }
 
-          // If +2 or +4, process forced draw for next player after 1s
+          // If +2 or +4, just return - the plusTwoCount is now set correctly
           if (decision.card.isPlusTwo || decision.card.isPlusFour) {
-            setTimeout(() => {
-              // Figure out who is being forced to draw
-              let nextIndex = (game.currentTurn + game.gameDirection + 4) % 4;
-              let nextPlayerId =
-                nextIndex === 0
-                  ? game.players[0]
-                  : game.aiPlayers[nextIndex - 1];
-              let cardsToDraw = decision.card.isPlusTwo ? 2 : 4;
-              // Reset plusTwoCount since we're processing the draw now
-              game.plusTwoCount = 0;
-              // Draw cards for next player
-              for (let i = 0; i < cardsToDraw && game.deck.length > 0; i++) {
-                const drawnCard = game.deck.pop();
-                game.hands[nextPlayerId].push(drawnCard);
-              }
-              io.to(roomId).emit("cardDrawn", {
-                playerId: nextPlayerId,
-                turn: nextIndex,
-                isPlusTwo: decision.card.isPlusTwo,
-                isPlusFour: decision.card.isPlusFour,
-                cardsDrawn: cardsToDraw,
-              });
-              if (nextIndex === 0) {
-                io.to(nextPlayerId).emit("updateHand", {
-                  hand: game.hands[nextPlayerId],
-                });
-              }
-              // After another 1s, emit the reaction phrase for the player who drew
-              setTimeout(() => {
-                if (nextIndex === 0) {
-                  // Human: emit a special event for client to show reaction
-                  io.to(roomId).emit("plusDrawnReaction", {
-                    playerId: nextPlayerId,
-                    isPlusTwo: decision.card.isPlusTwo,
-                    isPlusFour: decision.card.isPlusFour,
-                  });
-                } else {
-                  // AI: emit aiThinking for the AI who drew
-                  const aiDrawIndex = nextIndex - 1;
-                  const aiDrawName = aiNames[aiDrawIndex] || "Wug";
-                  const wugDrawKey = aiDrawName
-                    .toLowerCase()
-                    .replace(/\s+/g, "");
-                  let drawPhrase = null;
-                  try {
-                    drawPhrase = {
-                      wugKey: wugDrawKey,
-                      card: {
-                        isPlusTwo: decision.card.isPlusTwo,
-                        isPlusFour: decision.card.isPlusFour,
-                      },
-                      mode: game.mode,
-                    };
-                  } catch (error) {}
-                  if (drawPhrase) {
-                    io.to(roomId).emit("aiThinking", {
-                      playerId: game.aiPlayers[aiDrawIndex],
-                      phrase: drawPhrase,
-                    });
-                  }
-                }
-                // After all, advance the turn and continue
-                setTimeout(() => {
-                  // Move to next turn (already skipped in game logic)
-                  nextTurn(game);
-                  io.to(roomId).emit("turnUpdate", {
-                    turn: game.currentTurn,
-                  });
-                  if (game.currentTurn === 0 && game.plusTwoCount > 0) {
-                    processNextAITurn();
-                  } else if (game.currentTurn !== 0) {
-                    processNextAITurn();
-                  }
-                }, 500); // Short delay before next turn
-              }, 1000);
-            }, 1000);
-            return;
+            return; // Exit early to prevent main AI play logic from executing
           }
         } else {
           io.to(roomId).emit("cardDrawn", {
@@ -900,7 +911,7 @@ function processAITurns(game, roomId) {
           });
         }
 
-        // Move to next turn
+        // Move to next turn (only if no +2/+4 was played)
         nextTurn(game);
         console.log(`Turn advanced to: ${game.currentTurn}`);
 
@@ -918,7 +929,7 @@ function processAITurns(game, roomId) {
           // Notify human player that it's their turn
           // (already done above)
         }
-      }, 2000); // 2 second delay for AI to play their card
+      }, 4000); // 4 second delay for AI to play their card
     } else {
       // AI can't make a decision (no playable cards and deck is empty)
       // Skip this AI's turn and move to next player

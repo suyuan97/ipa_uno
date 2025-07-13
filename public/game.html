@@ -283,11 +283,27 @@
         display: flex;
         justify-content: center;
         gap: 5px;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         max-height: 120px;
-        overflow-y: auto;
+        overflow-x: auto;
+        overflow-y: hidden;
         width: 100%;
         padding: 0 20px;
+        position: relative;
+        transition: gap 0.3s;
+      }
+      /* Overlapping cards for large hands */
+      .hand.overlap {
+        gap: 0px;
+      }
+      .hand.overlap .card {
+        margin-left: -32px;
+        z-index: 1;
+        position: relative;
+        flex-shrink: 0;
+      }
+      .hand.overlap .card:first-child {
+        margin-left: 0;
       }
 
       .action-buttons {
@@ -1058,6 +1074,11 @@
         isPlaying = false;
         updateTurnIndicator();
         render();
+
+        // If it's now the human player's turn, check if they need to draw due to +2/+4
+        if (isMyTurn) {
+          socket.emit("startTurn", { roomId });
+        }
       });
 
       socket.on("gameOver", (data) => {
@@ -1190,6 +1211,13 @@
         if (hintMessage) hintMessage.textContent = "";
         let anyHints = false;
         let hasPlayable = false;
+
+        // Overlap cards if more than 10
+        if (hand.length > 10) {
+          handDiv.classList.add("overlap");
+        } else {
+          handDiv.classList.remove("overlap");
+        }
 
         if (hand.length === 0) {
           const loadingDiv = document.createElement("div");
