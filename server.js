@@ -109,6 +109,7 @@ function dealGame(game, playerIds, mode = "consonant") {
   game.started = true;
   game.mode = mode;
   game.currentTurn = 0; // Human always starts
+  return game;
 }
 
 function isMatch(cardA, cardB, mode) {
@@ -355,7 +356,28 @@ function nextTurn(game) {
 io.on("connection", (socket) => {
   console.log("A player connected:", socket.id);
 
-  socket.on("joinGame", (roomId, mode = "consonant", difficulty = "easy") => {
+  socket.on("joinGame", (roomId, mode, difficulty) => {
+    // If the room exists and the player is already in the room, treat this as a request to restart the game
+    if (games[roomId] && games[roomId].players[0] === socket.id) {
+      // Reset the game state for the room
+      dealGame(games[roomId], games[roomId].players, mode);
+      // Re-join the socket to the room (in case it was disconnected)
+      socket.join(roomId);
+      // Notify the client that the game has started
+      io.to(roomId).emit("gameStarted", {
+        hand: games[roomId].hands[socket.id],
+        pileCard: games[roomId].pileCard,
+        playerId: socket.id,
+        turn: games[roomId].currentTurn,
+        mode: games[roomId].mode,
+        difficulty: games[roomId].difficulty,
+        aiPlayers: games[roomId].aiPlayers,
+      });
+      // Start the AI turns if needed
+      setTimeout(() => processAITurns(games[roomId], roomId), 1000);
+      return;
+    }
+
     if (!games[roomId]) {
       games[roomId] = createGame(roomId);
       games[roomId].mode = mode;

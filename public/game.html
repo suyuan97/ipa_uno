@@ -864,6 +864,53 @@
         );
       });
 
+      // Handle game restart (Another Round button)
+      socket.on("gameStarted", (data) => {
+        console.log("Game restarted:", data);
+        // Hide the winner overlay and reset state
+        document.getElementById("winnerOverlay").style.display = "none";
+        // Clear any existing game state
+        hand = [];
+        pileCard = null;
+        aiPlayers = [];
+        currentTurn = 0;
+        isMyTurn = true;
+        isPlaying = false;
+        aiCardCounts = {};
+        gameDirection = 1;
+        restarting = false;
+        hintRemaining = 5;
+
+        hand = data.hand;
+        pileCard = data.pileCard;
+        aiPlayers = data.aiPlayers;
+        currentTurn = data.turn;
+        gameStarted = true;
+
+        isMyTurn = currentTurn === 0;
+        isPlaying = false;
+        // Assign AI names from aiNameList (shuffle if more than 3)
+        if (window.aiNameList && window.aiNameList.length >= 3) {
+          const shuffled = window.aiNameList
+            .slice()
+            .sort(() => 0.5 - Math.random());
+          aiNames = [shuffled[0], shuffled[1], shuffled[2]];
+        } else {
+          aiNames = ["Bibi", "Sass", "Mimi"];
+        }
+        // Clear the action log
+        document.getElementById("actionLog").innerHTML = "";
+        // Re-enable buttons
+        document.getElementById("drawButton").disabled = false;
+        document.getElementById("hintButton").disabled = false;
+        render();
+        updateTurnIndicator();
+        addLogEntry(
+          "New round started! You are playing against 3 wugs 🐤.",
+          "system"
+        );
+      });
+
       socket.on("aiThinking", (data) => {
         console.log("AI thinking:", data);
 
