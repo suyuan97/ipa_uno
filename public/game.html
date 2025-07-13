@@ -102,6 +102,11 @@
         position: relative;
         animation: pop-pile-card 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
         text-align: center;
+        word-break: break-word;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        max-width: 100%;
+        box-sizing: border-box;
       }
 
       @keyframes pop-pile-card {
@@ -385,6 +390,46 @@
         border-left: 3px solid #4caf50;
       }
 
+      .log-entry.uno {
+        background: #ffebee;
+        color: #c62828;
+        font-weight: bold;
+        border-left: 3px solid #ff6b6b;
+        animation: uno-glow 1s ease-in-out;
+      }
+
+      @keyframes uno-glow {
+        0% {
+          box-shadow: 0 0 5px #ff6b6b;
+        }
+        50% {
+          box-shadow: 0 0 20px #ff6b6b, 0 0 30px #ff6b6b;
+        }
+        100% {
+          box-shadow: 0 0 5px #ff6b6b;
+        }
+      }
+
+      .log-entry.catch {
+        background: #fff3e0;
+        color: #e65100;
+        font-weight: bold;
+        border-left: 3px solid #ff9800;
+        animation: catch-glow 1s ease-in-out;
+      }
+
+      @keyframes catch-glow {
+        0% {
+          box-shadow: 0 0 5px #ff9800;
+        }
+        50% {
+          box-shadow: 0 0 20px #ff9800, 0 0 30px #ff9800;
+        }
+        100% {
+          box-shadow: 0 0 5px #ff9800;
+        }
+      }
+
       .direction-indicator {
         position: absolute;
         top: 10px;
@@ -588,6 +633,13 @@
         }
       }
 
+      /* Add this CSS to the <style> section or your stylesheet: */
+      .uno-highlight {
+        box-shadow: 0 0 16px 6px #ff69b4, 0 0 0 4px #fff;
+        border: 2px solid #ff69b4 !important;
+        transition: box-shadow 0.2s, border 0.2s;
+      }
+
       /* Change Card Modal Styles */
       #changeModal {
         display: none;
@@ -687,6 +739,17 @@
           <button onclick="drawCard()" id="drawButton">Draw Card</button>
           <button onclick="showHint()" id="hintButton">
             Hint (<span id="hintCount">5</span> left)
+          </button>
+          <button
+            onclick="callUno()"
+            id="unoButton"
+            style="
+              background-color: #ffb6c1;
+              border-color: #ff69b4;
+              color: #333;
+            "
+          >
+            Call UNO!
           </button>
           <button onclick="window.location.href='index.html'">
             Return to Homepage
@@ -825,6 +888,7 @@
     <script src="ai-names.js"></script>
     <script src="wug-phrases.js"></script>
     <script>
+      let catchableAIs = [];
       const socket = io();
       const urlParams = new URLSearchParams(window.location.search);
       const currentMode = urlParams.get("mode") || "consonant";
@@ -1144,6 +1208,48 @@
         // drawButton will be re-enabled in render() if isMyTurn
       });
 
+      socket.on("unoCalled", (data) => {
+        console.log("UNO called:", data);
+        if (data.playerId === socket.id) {
+          addLogEntry("🎉 UNO! You called UNO!", "uno");
+        } else {
+          const aiIndex = parseInt(data.playerId.split("_")[1]) - 1;
+          const aiName = aiNames[aiIndex] || "Wug";
+          addLogEntry(`🎉 UNO! ${aiName} called UNO!`, "uno");
+          // Show speech bubble and highlight for AI
+          showSpeechBubble(aiIndex + 1, "UNO!");
+          const aiBox = document.getElementById(["ai1", "ai2", "ai3"][aiIndex]);
+          if (aiBox) {
+            aiBox.classList.add("uno-highlight");
+            setTimeout(() => aiBox.classList.remove("uno-highlight"), 2000);
+          }
+        }
+      });
+
+      socket.on("unoCaught", (data) => {
+        console.log("UNO caught:", data);
+        const caughtAiIndex = parseInt(data.caughtPlayerId.split("_")[1]) - 1;
+        const caughtAiName = aiNames[caughtAiIndex] || "Wug";
+
+        // Update AI card count
+        aiCardCounts[data.caughtPlayerId] += data.cardsDrawn;
+
+        if (data.catcherId === socket.id) {
+          addLogEntry(
+            `🎯 You caught ${caughtAiName}! They drew ${data.cardsDrawn} card.`,
+            "catch"
+          );
+        } else {
+          addLogEntry(
+            `🎯 ${caughtAiName} got caught! They drew ${data.cardsDrawn} card.`,
+            "catch"
+          );
+        }
+
+        // Re-render to update AI card counts and click handlers
+        render();
+      });
+
       socket.on("updateHand", (data) => {
         console.log("Hand updated:", data.hand);
         hand = data.hand;
@@ -1155,6 +1261,11 @@
         currentTurn = data.turn;
         isMyTurn = currentTurn === 0;
         isPlaying = false;
+        if (data.catchableAIs) {
+          catchableAIs = data.catchableAIs;
+        } else {
+          catchableAIs = [];
+        }
         updateTurnIndicator();
         render();
 
@@ -1176,8 +1287,14 @@
         addLogEntry(`Game Over! ${winner} won!`, "system");
         document.getElementById("drawButton").disabled = true;
         document.getElementById("hintButton").disabled = true;
+        document.getElementById("unoButton").disabled = true;
         // Show fancy winner overlay
         showWinnerOverlay(winner);
+      });
+
+      socket.on("catchableAIsUpdate", (data) => {
+        catchableAIs = data.catchableAIs || [];
+        renderAIPlayers();
       });
 
       function showWinnerOverlay(winner) {
@@ -1281,6 +1398,22 @@
           hintRemaining > 0
         ) {
           document.getElementById("hintButton").disabled = false;
+        }
+
+        // Enable/disable UNO button based on hand size and turn
+        const unoButton = document.getElementById("unoButton");
+        let playableCount = 0;
+        if (pileCard && hand.length > 0) {
+          playableCount = hand.filter((card) => isMatch(card, pileCard)).length;
+        }
+        if (
+          isMyTurn &&
+          (hand.length === 1 ||
+            (hand.length === 2 && playableCount > 0 && playableCount <= 2))
+        ) {
+          unoButton.disabled = false;
+        } else {
+          unoButton.disabled = true;
         }
       }
 
@@ -1494,6 +1627,41 @@
         humanBox.className = `human-player${
           currentTurn === 0 ? " active" : ""
         }`;
+
+        // Add click handlers for catching AI players
+        if (isMyTurn) {
+          if (catchableAIs.includes("ai_1")) {
+            ai1.style.cursor = "pointer";
+            ai1.onclick = () => catchUno("ai_1");
+          } else {
+            ai1.style.cursor = "default";
+            ai1.onclick = null;
+          }
+
+          if (catchableAIs.includes("ai_2")) {
+            ai2.style.cursor = "pointer";
+            ai2.onclick = () => catchUno("ai_2");
+          } else {
+            ai2.style.cursor = "default";
+            ai2.onclick = null;
+          }
+
+          if (catchableAIs.includes("ai_3")) {
+            ai3.style.cursor = "pointer";
+            ai3.onclick = () => catchUno("ai_3");
+          } else {
+            ai3.style.cursor = "default";
+            ai3.onclick = null;
+          }
+        } else {
+          // Remove click handlers when not player's turn
+          ai1.style.cursor = "default";
+          ai1.onclick = null;
+          ai2.style.cursor = "default";
+          ai2.onclick = null;
+          ai3.style.cursor = "default";
+          ai3.onclick = null;
+        }
       }
 
       function updateTurnIndicator() {
@@ -1546,6 +1714,7 @@
         isMyTurn = false; // Immediately prevent further plays
         document.getElementById("drawButton").disabled = true;
         document.getElementById("hintButton").disabled = true;
+        document.getElementById("unoButton").disabled = true;
         render(); // This will re-render the hand with no click handlers
 
         const card = hand[index];
@@ -1564,6 +1733,9 @@
           document.getElementById("drawButton").disabled = false;
           if (hintRemaining > 0)
             document.getElementById("hintButton").disabled = false;
+          // Re-enable UNO button if player has 1 card
+          if (hand.length === 1)
+            document.getElementById("unoButton").disabled = false;
           render();
         }
       }
@@ -1733,6 +1905,7 @@
         }
         document.getElementById("drawButton").disabled = true;
         document.getElementById("hintButton").disabled = true;
+        document.getElementById("unoButton").disabled = true;
         isMyTurn = false;
         socket.emit("drawCard", { roomId });
       }
@@ -1747,6 +1920,42 @@
         addLogEntry("You used a hint", "player");
         // Do not disable drawButton after hint
         render(true);
+      }
+
+      function callUno() {
+        if (!isMyTurn) {
+          addLogEntry("Not your turn!", "error");
+          return;
+        }
+        if (hand.length !== 1) {
+          addLogEntry(
+            "You can only call UNO when you have exactly 1 card!",
+            "error"
+          );
+          return;
+        }
+        socket.emit("callUno", { roomId });
+        addLogEntry("You called UNO!", "player");
+        document.getElementById("unoButton").disabled = true;
+      }
+
+      function catchUno(aiId) {
+        if (!isMyTurn) {
+          addLogEntry("Not your turn!", "error");
+          return;
+        }
+        if (aiCardCounts[aiId] !== 1) {
+          addLogEntry(
+            "You can only catch an AI when they have exactly 1 card!",
+            "error"
+          );
+          return;
+        }
+        socket.emit("catchUno", { roomId, aiId });
+        addLogEntry(
+          `You caught ${aiNames[parseInt(aiId.split("_")[1]) - 1] || "Wug"}!`,
+          "player"
+        );
       }
 
       function isMatch(card, pileCard) {

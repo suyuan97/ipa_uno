@@ -67,6 +67,7 @@ function createGame(roomId) {
     lastPlayerId: null,
     discardPile: [], // Track discarded cards to reshuffle when deck is empty
     plusTwoCount: 0, // Track accumulated +2 cards
+    catchableAIs: [], // Track AIs that can be caught for not calling UNO
   };
 }
 
@@ -193,6 +194,27 @@ function aiMakeDecision(game, aiId) {
   console.log(
     `AI ${aiId} has ${hand.length} cards, ${playableCards.length} playable`
   );
+
+  // TEST MODE: AI never calls UNO
+  // if (hand.length === 1 && Math.random() < 0.8) {
+  //   console.log(`AI ${aiId} calling UNO!`);
+  //   return {
+  //     action: "callUno",
+  //     playerId: aiId,
+  //   };
+  // }
+
+  // If AI has 1 card but didn't call UNO, mark them as catchable
+  if (hand.length === 1) {
+    console.log(
+      `AI ${aiId} has 1 card but didn't call UNO - they can be caught!`
+    );
+    // Mark this AI as catchable for the next human turn
+    if (!game.catchableAIs) game.catchableAIs = [];
+    if (!game.catchableAIs.includes(aiId)) {
+      game.catchableAIs.push(aiId);
+    }
+  }
 
   if (playableCards.length > 0) {
     // AI plays a card
@@ -351,6 +373,20 @@ function aiMakeDecision(game, aiId) {
 
 function nextTurn(game) {
   game.currentTurn = (game.currentTurn + game.gameDirection + 4) % 4;
+}
+
+function updateCatchableAIs(game) {
+  if (!game.catchableAIs) game.catchableAIs = [];
+  for (const aiId of game.aiPlayers) {
+    const hand = game.hands[aiId];
+    if (hand && hand.length === 1) {
+      if (!game.catchableAIs.includes(aiId)) {
+        game.catchableAIs.push(aiId);
+      }
+    } else {
+      game.catchableAIs = game.catchableAIs.filter((id) => id !== aiId);
+    }
+  }
 }
 
 io.on("connection", (socket) => {
@@ -557,6 +593,86 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("callUno", (data) => {
+    const { roomId } = data;
+    const game = games[roomId];
+
+    if (!game || game.currentTurn !== 0) {
+      socket.emit("error", { message: "Not your turn" });
+      return;
+    }
+
+    const hand = game.hands[socket.id];
+
+    // Check if player has exactly 1 card
+    if (hand.length !== 1) {
+      socket.emit("error", {
+        message: "You can only call UNO when you have exactly 1 card!",
+      });
+      return;
+    }
+
+    // Broadcast UNO call to all players
+    io.to(roomId).emit("unoCalled", {
+      playerId: socket.id,
+      playerName: "You",
+    });
+
+    console.log(`UNO called by human player!`);
+  });
+
+  socket.on("catchUno", (data) => {
+    const { roomId, aiId } = data;
+    const game = games[roomId];
+
+    if (!game || game.currentTurn !== 0) {
+      socket.emit("error", { message: "Not your turn" });
+      return;
+    }
+
+    const aiHand = game.hands[aiId];
+
+    // Check if AI has exactly 1 card and is in the catchable list
+    if (aiHand.length !== 1 || !game.catchableAIs.includes(aiId)) {
+      socket.emit("error", {
+        message:
+          "You can only catch an AI when they have exactly 1 card and didn't call UNO!",
+      });
+      return;
+    }
+
+    // AI gets caught! They must draw 1 card
+    if (game.deck.length > 0) {
+      const drawnCard = game.deck.pop();
+      aiHand.push(drawnCard);
+    }
+
+    // Remove AI from catchable list since they now have more than 1 card
+    game.catchableAIs = game.catchableAIs.filter((id) => id !== aiId);
+
+    // Broadcast the catch to all players
+    io.to(roomId).emit("unoCaught", {
+      caughtPlayerId: aiId,
+      catcherId: socket.id,
+      cardsDrawn: 1,
+    });
+
+    console.log(`AI ${aiId} caught by human player! They drew 1 card.`);
+
+    // Advance the turn and resume the game
+    updateCatchableAIs(game);
+    io.to(roomId).emit("turnUpdate", {
+      turn: game.currentTurn,
+      catchableAIs: game.catchableAIs || [],
+    });
+    io.to(roomId).emit("catchableAIsUpdate", {
+      catchableAIs: game.catchableAIs,
+    });
+    if (game.currentTurn !== 0) {
+      processAITurns(game, roomId);
+    }
+  });
+
   // Handle human player starting their turn with plusTwoCount > 0
   socket.on("startTurn", (data) => {
     const { roomId } = data;
@@ -607,8 +723,10 @@ io.on("connection", (socket) => {
 
       // Skip human player's turn after drawing
       nextTurn(game);
+      updateCatchableAIs(game);
       io.to(roomId).emit("turnUpdate", {
         turn: game.currentTurn,
+        catchableAIs: game.catchableAIs || [],
       });
 
       // Process AI turns
@@ -718,8 +836,10 @@ function processAITurns(game, roomId) {
           hand: game.hands[playerId],
         });
         nextTurn(game);
-        io.to(roomId).emit("turnUpdate", {
-          turn: game.currentTurn,
+        console.log(`Turn advanced to: ${game.currentTurn}`);
+        updateCatchableAIs(game);
+        io.to(roomId).emit("catchableAIsUpdate", {
+          catchableAIs: game.catchableAIs,
         });
         // After skipping, check again if the next player is human and plusTwoCount > 0
         if (game.currentTurn === 0 && game.plusTwoCount > 0) {
@@ -782,8 +902,14 @@ function processAITurns(game, roomId) {
           });
           // Skip this AI's turn after drawing +2/+4 cards
           nextTurn(game);
+          console.log(`Turn advanced to: ${game.currentTurn}`);
+          updateCatchableAIs(game);
+          io.to(roomId).emit("catchableAIsUpdate", {
+            catchableAIs: game.catchableAIs,
+          });
           io.to(roomId).emit("turnUpdate", {
             turn: game.currentTurn,
+            catchableAIs: game.catchableAIs || [],
           });
           // After drawing +2/+4 cards, continue processing turns
           processNextAITurn();
@@ -836,7 +962,34 @@ function processAITurns(game, roomId) {
 
       // Play the card at 2 second mark
       setTimeout(() => {
-        if (decision.action === "play") {
+        if (decision.action === "callUno") {
+          // AI calls UNO
+          io.to(roomId).emit("unoCalled", {
+            playerId: aiId,
+            playerName: aiName,
+          });
+          console.log(`AI ${aiId} called UNO!`);
+
+          // Remove AI from catchable list since they successfully called UNO
+          if (game.catchableAIs) {
+            game.catchableAIs = game.catchableAIs.filter((id) => id !== aiId);
+          }
+
+          // Move to next turn after UNO call
+          nextTurn(game);
+          console.log(`Turn advanced to: ${game.currentTurn}`);
+          updateCatchableAIs(game);
+          io.to(roomId).emit("catchableAIsUpdate", {
+            catchableAIs: game.catchableAIs,
+          });
+          io.to(roomId).emit("turnUpdate", {
+            turn: game.currentTurn,
+            catchableAIs: game.catchableAIs || [],
+          });
+          // Continue processing turns
+          processNextAITurn();
+          return;
+        } else if (decision.action === "play") {
           // Update the pile card and hand
           game.pileCard = decision.card;
           game.lastPlayedCard = decision.card;
@@ -858,6 +1011,7 @@ function processAITurns(game, roomId) {
             );
             // Advance turn and process next turn immediately
             nextTurn(game);
+            console.log(`Turn advanced to: ${game.currentTurn}`);
             io.to(roomId).emit("cardPlayed", {
               card: decision.card,
               playerId: aiId,
@@ -867,7 +1021,14 @@ function processAITurns(game, roomId) {
               isPlusTwo: decision.card.isPlusTwo,
               isPlusFour: decision.card.isPlusFour,
             });
-            io.to(roomId).emit("turnUpdate", { turn: game.currentTurn });
+            updateCatchableAIs(game);
+            io.to(roomId).emit("catchableAIsUpdate", {
+              catchableAIs: game.catchableAIs,
+            });
+            io.to(roomId).emit("turnUpdate", {
+              turn: game.currentTurn,
+              catchableAIs: game.catchableAIs || [],
+            });
             processNextAITurn();
             return;
           }
@@ -888,6 +1049,7 @@ function processAITurns(game, roomId) {
             );
             // Advance turn and process next turn immediately
             nextTurn(game);
+            console.log(`Turn advanced to: ${game.currentTurn}`);
             io.to(roomId).emit("cardPlayed", {
               card: decision.card,
               playerId: aiId,
@@ -897,7 +1059,14 @@ function processAITurns(game, roomId) {
               isPlusTwo: decision.card.isPlusTwo,
               isPlusFour: decision.card.isPlusFour,
             });
-            io.to(roomId).emit("turnUpdate", { turn: game.currentTurn });
+            updateCatchableAIs(game);
+            io.to(roomId).emit("catchableAIsUpdate", {
+              catchableAIs: game.catchableAIs,
+            });
+            io.to(roomId).emit("turnUpdate", {
+              turn: game.currentTurn,
+              catchableAIs: game.catchableAIs || [],
+            });
             processNextAITurn();
             return;
           }
@@ -938,8 +1107,13 @@ function processAITurns(game, roomId) {
         console.log(`Turn advanced to: ${game.currentTurn}`);
 
         // Process next AI turn if needed
+        updateCatchableAIs(game);
+        io.to(roomId).emit("catchableAIsUpdate", {
+          catchableAIs: game.catchableAIs,
+        });
         io.to(roomId).emit("turnUpdate", {
           turn: game.currentTurn,
+          catchableAIs: game.catchableAIs || [],
         });
         // After skipping, check again if the next player is human and plusTwoCount > 0
         if (game.currentTurn === 0 && game.plusTwoCount > 0) {
@@ -960,8 +1134,13 @@ function processAITurns(game, roomId) {
       console.log(`Turn advanced to: ${game.currentTurn}`);
 
       // Process next AI turn if needed
+      updateCatchableAIs(game);
+      io.to(roomId).emit("catchableAIsUpdate", {
+        catchableAIs: game.catchableAIs,
+      });
       io.to(roomId).emit("turnUpdate", {
         turn: game.currentTurn,
+        catchableAIs: game.catchableAIs || [],
       });
       // After skipping, check again if the next player is human and plusTwoCount > 0
       if (game.currentTurn === 0 && game.plusTwoCount > 0) {
