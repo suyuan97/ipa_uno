@@ -6,49 +6,353 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>IPA UNO - Welcome</title>
     <style>
+      @import url("https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap");
+      @import url("https://fonts.googleapis.com/css2?family=Rubik:wght@400&display=swap");
+      html,
       body {
-        font-family: sans-serif;
-        text-align: center;
-        background: #f8f8f8;
-        padding: 40px;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: "Luckiest Guy", "Comic Sans MS", "Comic Sans", "Chalkboard",
+          cursive, sans-serif;
+        background: #eaf6fb;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .floating-ipa {
+        position: absolute;
+        color: #d4e8f0;
+        font-size: 2rem;
+        opacity: 0.6;
+        animation: float 8s ease-in-out infinite;
+        pointer-events: none;
+        z-index: -1;
+        font-family: "Luckiest Guy", "Comic Sans MS", "Comic Sans", "Chalkboard",
+          cursive, sans-serif;
+      }
+
+      .floating-ipa {
+        font-weight: bold;
+      }
+
+      .floating-ipa:nth-child(1) {
+        top: 8%;
+        left: 10%;
+        animation-delay: 0s;
+      }
+
+      .floating-ipa:nth-child(2) {
+        top: 20%;
+        right: 15%;
+        animation-delay: 2s;
+      }
+
+      .floating-ipa:nth-child(3) {
+        bottom: 20%;
+        left: 12%;
+        animation-delay: 4s;
+      }
+
+      .floating-ipa:nth-child(4) {
+        bottom: 30%;
+        right: 10%;
+        animation-delay: 6s;
+      }
+
+      .floating-ipa:nth-child(5) {
+        top: 60%;
+        left: 5%;
+        animation-delay: 1s;
+      }
+
+      .floating-ipa:nth-child(6) {
+        top: 40%;
+        right: 5%;
+        animation-delay: 3s;
+      }
+
+      .floating-ipa:nth-child(7) {
+        top: 12%;
+        left: 35%;
+        animation-delay: 1.5s;
+      }
+
+      .floating-ipa:nth-child(8) {
+        top: 80%;
+        right: 30%;
+        animation-delay: 4.5s;
+      }
+
+      .floating-ipa:nth-child(9) {
+        top: 50%;
+        left: 25%;
+        animation-delay: 2.5s;
+      }
+
+      .floating-ipa:nth-child(10) {
+        bottom: 10%;
+        left: 40%;
+        animation-delay: 5.5s;
+      }
+
+      .floating-ipa:nth-child(11) {
+        top: 25%;
+        right: 40%;
+        animation-delay: 3.5s;
+      }
+
+      .floating-ipa:nth-child(12) {
+        bottom: 45%;
+        right: 45%;
+        animation-delay: 6.5s;
+      }
+
+      .floating-ipa:nth-child(13) {
+        top: 5%;
+        left: 55%;
+        animation-delay: 0.5s;
+      }
+
+      .floating-ipa:nth-child(14) {
+        top: 85%;
+        left: 20%;
+        animation-delay: 2.5s;
+      }
+
+      .floating-ipa:nth-child(15) {
+        top: 35%;
+        left: 70%;
+        animation-delay: 4.5s;
+      }
+
+      .floating-ipa:nth-child(16) {
+        bottom: 15%;
+        right: 25%;
+        animation-delay: 1.5s;
+      }
+
+      .floating-ipa:nth-child(17) {
+        top: 70%;
+        left: 45%;
+        animation-delay: 3.5s;
+      }
+
+      .floating-ipa:nth-child(18) {
+        top: 15%;
+        right: 55%;
+        animation-delay: 5.5s;
+      }
+
+      .floating-ipa:nth-child(19) {
+        bottom: 35%;
+        left: 60%;
+        animation-delay: 0.8s;
+      }
+
+      .floating-ipa:nth-child(20) {
+        top: 55%;
+        right: 35%;
+        animation-delay: 2.8s;
+      }
+
+      .floating-ipa:nth-child(21) {
+        bottom: 5%;
+        right: 20%;
+        animation-delay: 4.8s;
+      }
+
+      .floating-ipa:nth-child(22) {
+        top: 30%;
+        left: 80%;
+        animation-delay: 1.8s;
+      }
+
+      .floating-ipa:nth-child(23) {
+        top: 75%;
+        right: 15%;
+        animation-delay: 3.8s;
+      }
+
+      .floating-ipa:nth-child(24) {
+        bottom: 25%;
+        left: 75%;
+        animation-delay: 5.8s;
+      }
+
+      @keyframes float {
+        0%,
+        100% {
+          transform: translateY(0px) rotate(0deg);
+        }
+        50% {
+          transform: translateY(-20px) rotate(5deg);
+        }
+      }
+      .center-container {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
+      .title-wrapper {
+        width: 510px;
+        max-width: 90vw;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
       }
       h1 {
-        font-size: 2rem;
+        font-size: 4.2rem;
+        color: #ffd966;
+        letter-spacing: 2px;
+        text-shadow: 1px 1px 0 #fff, 2px 2px 0 #e0b84c, 0 0 8px #fffbe7;
+        font-family: "Luckiest Guy", "Comic Sans MS", "Comic Sans", "Chalkboard",
+          cursive, sans-serif;
+        margin-bottom: 0.2em;
+        width: 510px;
+        max-width: 90vw;
+        text-align: center;
+      }
+      .subtitle {
+        font-size: 1.6rem;
+        color: #2196f3;
+        font-family: "Luckiest Guy", "Comic Sans MS", "Comic Sans", "Chalkboard",
+          cursive, sans-serif;
+        margin-bottom: 1.2em;
+        letter-spacing: 1px;
+        text-align: center;
+      }
+      h2 {
+        font-family: "Luckiest Guy", "Comic Sans MS", "Comic Sans", "Chalkboard",
+          cursive, sans-serif;
+        color: #1976d2;
+        margin-bottom: 0.3em;
+        font-size: 1.3rem;
       }
       .section {
-        margin: 20px;
+        margin: 18px 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
       }
-      button {
-        padding: 10px 20px;
-        margin: 10px;
-        font-size: 1rem;
+      form {
+        background: rgba(255, 255, 255, 0.92);
+        border-radius: 18px;
+        box-shadow: 0 4px 24px #b3e5fc33;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px 18px 16px 18px;
+        margin-top: 0;
+        max-width: 340px;
+        width: 90vw;
+      }
+      label {
+        font-family: "Rubik", Arial, sans-serif;
+        font-size: 0.98rem;
+        color: #1a237e;
+        font-weight: 400;
+        letter-spacing: 0.1px;
+      }
+      button[type="submit"] {
+        padding: 10px 28px;
+        font-size: 1.1rem;
+        font-family: "Luckiest Guy", "Comic Sans MS", "Comic Sans", "Chalkboard",
+          cursive, sans-serif;
+        background: #2196f3;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px #7db6e899, 0 1px 4px #2196f399;
         cursor: pointer;
+        letter-spacing: 1px;
+        text-shadow: 1px 1px 0 #1976d2;
+        margin-top: 18px;
+        margin-bottom: 0.5em;
+        transition: background 0.2s, box-shadow 0.2s;
+        display: block;
+        align-self: center;
+      }
+      button[type="submit"]:hover {
+        background: #1976d2;
+        box-shadow: 0 4px 16px #7db6e8cc, 0 2px 8px #2196f399;
+      }
+      .section label {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 8px;
+        width: 100%;
+        text-align: left;
+      }
+      .section label:last-child {
+        margin-bottom: 0;
+      }
+      .section input[type="radio"] {
+        margin-right: 8px;
       }
     </style>
   </head>
   <body>
-    <h1>Welcome to IPA UNO</h1>
-    <form id="startForm" action="game.html" method="get">
-      <div class="section">
-        <h2>Choose Segment Type:</h2>
-        <label
-          ><input type="radio" name="mode" value="consonant" checked />
-          Consonants</label
-        >
-        <label><input type="radio" name="mode" value="vowel" /> Vowels</label>
+    <div class="floating-ipa">ʃ</div>
+    <div class="floating-ipa">θ</div>
+    <div class="floating-ipa">ŋ</div>
+    <div class="floating-ipa">ɲ</div>
+    <div class="floating-ipa">ʝ</div>
+    <div class="floating-ipa">ɰ</div>
+    <div class="floating-ipa">ʒ</div>
+    <div class="floating-ipa">ç</div>
+    <div class="floating-ipa">β</div>
+    <div class="floating-ipa">ɸ</div>
+    <div class="floating-ipa">ɦ</div>
+    <div class="floating-ipa">ʟ</div>
+    <div class="floating-ipa">ɕ</div>
+    <div class="floating-ipa">ʑ</div>
+    <div class="floating-ipa">ɟ</div>
+    <div class="floating-ipa">ɢ</div>
+    <div class="floating-ipa">ɬ</div>
+    <div class="floating-ipa">ɮ</div>
+    <div class="floating-ipa">ɻ</div>
+    <div class="floating-ipa">ɽ</div>
+    <div class="floating-ipa">ɿ</div>
+    <div class="floating-ipa">ʂ</div>
+    <div class="floating-ipa">ʐ</div>
+    <div class="center-container">
+      <div class="title-wrapper">
+        <h1>IPA UNO</h1>
+        <div class="subtitle">Come play with three wug[z]!</div>
       </div>
-      <div class="section">
-        <h2>Choose Difficulty:</h2>
-        <label
-          ><input type="radio" name="difficulty" value="easy" checked /> Easy
-          (Labeled)</label
-        >
-        <label
-          ><input type="radio" name="difficulty" value="hard" /> Hard (Symbol
-          Only)</label
-        >
-      </div>
-      <button type="submit">Start Game</button>
-    </form>
+      <form id="startForm" action="game.html" method="get">
+        <div class="section">
+          <h2>Choose Segment Type:</h2>
+          <label
+            ><input type="radio" name="mode" value="consonant" checked />
+            Consonants</label
+          >
+          <label><input type="radio" name="mode" value="vowel" /> Vowels</label>
+        </div>
+        <div class="section">
+          <h2>Choose Difficulty:</h2>
+          <label
+            ><input type="radio" name="difficulty" value="easy" checked /> Easy
+            (Labeled)</label
+          >
+          <label
+            ><input type="radio" name="difficulty" value="hard" /> Hard (Symbol
+            Only)</label
+          >
+        </div>
+        <button type="submit">Start Game</button>
+      </form>
+    </div>
   </body>
 </html>
