@@ -337,6 +337,108 @@
       .support-link:hover {
         color: #ff5252;
       }
+      #helpButton {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1000;
+        background: transparent;
+        border: none;
+        color: #bdbdbd;
+        border-radius: 50%;
+        width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        font-weight: bold;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        transition: background 0.2s, color 0.2s;
+        padding: 0;
+        background-image: url("icon/question.png");
+        background-size: 24px 24px;
+        background-position: center;
+        background-repeat: no-repeat;
+      }
+      #helpButton:hover {
+        background-color: rgba(224, 224, 224, 0.3);
+        background-image: url("icon/question.png");
+      }
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 2000;
+        left: 0;
+        top: 0;
+        width: 100vw;
+        height: 100vh;
+        overflow: auto;
+        background: rgba(0, 0, 0, 0.3);
+        justify-content: center;
+        align-items: center;
+      }
+      .modal-content {
+        background: #fff;
+        margin: auto;
+        padding: 24px 32px;
+        border-radius: 12px;
+        max-width: 400px;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+        position: relative;
+        text-align: left;
+        font-family: "Rubik", Arial, sans-serif;
+      }
+      .modal-content h2 {
+        margin-top: 0;
+        font-size: 1.3em;
+        color: #2196f3;
+        font-family: "Rubik", Arial, sans-serif;
+        font-weight: bold;
+      }
+      .modal-content ul {
+        padding-left: 20px;
+        margin: 0;
+        font-size: 1em;
+        font-family: "Rubik", Arial, sans-serif;
+      }
+      .modal-content li {
+        font-family: "Rubik", Arial, sans-serif;
+        font-size: 0.98rem;
+        color: #1a237e;
+        font-weight: 400;
+        letter-spacing: 0.1px;
+        margin-bottom: 8px;
+      }
+      .modal-content .bug-report {
+        margin-top: 20px;
+        padding-top: 15px;
+        border-top: 1px solid #e0e0e0;
+        font-family: "Rubik", Arial, sans-serif;
+        font-size: 0.85rem;
+        color: #666;
+        text-align: center;
+      }
+      .modal-content .bug-report a {
+        color: #2196f3;
+        text-decoration: none;
+        font-weight: 500;
+      }
+      .modal-content .bug-report a:hover {
+        text-decoration: underline;
+      }
+      .close {
+        position: absolute;
+        right: 16px;
+        top: 12px;
+        font-size: 1.5em;
+        color: #888;
+        cursor: pointer;
+      }
+      .close:hover {
+        color: #2196f3;
+      }
     </style>
   </head>
   <body>
@@ -399,5 +501,53 @@
         >❤️ Support on Ko-fi</a
       >
     </div>
+    <button
+      id="helpButton"
+      title="How to play IPA UNO?"
+      aria-label="How to play?"
+    ></button>
+    <div id="helpModal" class="modal">
+      <div class="modal-content">
+        <span class="close" id="closeHelpModal">&times;</span>
+        <h2>How to Play IPA UNO</h2>
+        <ul>
+          <li>
+            Match cards by place or manner (consonants) or height/backness
+            (vowels), or play special cards.
+          </li>
+          <li>Special cards: +2, +4, skip, reverse, change (🪄).</li>
+          <li>
+            When you have two cards, call UNO before playing your second-to-last
+            card!
+          </li>
+          <li>
+            If you forget to call UNO and are caught, you must draw a card.
+          </li>
+          <li>First to play all cards wins. Have fun with IPA!</li>
+        </ul>
+        <div class="bug-report">
+          Found a bug?
+          <a
+            href="https://github.com/suyuan97/ipa_uno/issues/new"
+            target="_blank"
+            >Report it here</a
+          >
+        </div>
+      </div>
+    </div>
+    <script>
+      document.getElementById("helpButton").onclick = function () {
+        document.getElementById("helpModal").style.display = "flex";
+      };
+      document.getElementById("closeHelpModal").onclick = function () {
+        document.getElementById("helpModal").style.display = "none";
+      };
+      window.onclick = function (event) {
+        const modal = document.getElementById("helpModal");
+        if (event.target === modal) {
+          modal.style.display = "none";
+        }
+      };
+    </script>
   </body>
 </html>
