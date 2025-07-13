@@ -202,6 +202,7 @@
         flex-direction: column;
         justify-content: center;
         align-items: center;
+        margin-top: -10vh;
       }
       .title-wrapper {
         width: 510px;
@@ -300,6 +301,42 @@
       .section input[type="radio"] {
         margin-right: 8px;
       }
+
+      .credits {
+        position: fixed;
+        bottom: 10px;
+        left: 10px;
+        background: rgba(255, 255, 255, 0.8);
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-family: "Rubik", Arial, sans-serif;
+        font-size: 0.8rem;
+        color: #1a237e;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+      }
+
+      .credits a {
+        color: #2196f3;
+        text-decoration: none;
+        font-weight: 500;
+      }
+
+      .credits a:hover {
+        text-decoration: underline;
+      }
+
+      .support-link {
+        margin-top: 4px;
+        display: inline-block;
+        font-size: 0.75rem;
+        color: #ff6b6b;
+        font-weight: 500;
+      }
+
+      .support-link:hover {
+        color: #ff5252;
+      }
     </style>
   </head>
   <body>
@@ -353,6 +390,14 @@
         </div>
         <button type="submit">Start Game</button>
       </form>
+    </div>
+    <div class="credits">
+      This game is built by
+      <a href="https://suyuan97.github.io/" target="_blank">Suyuan Liu</a> using
+      Cursor (Claude Sonnet 4). <br />Buy me a ☕️ |
+      <a href="https://ko-fi.com/syliu" target="_blank" class="support-link"
+        >❤️ Support on Ko-fi</a
+      >
     </div>
   </body>
 </html>
