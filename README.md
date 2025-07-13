@@ -99,6 +99,8 @@ The AI players use a simple strategy:
 
 ## Getting Started
 
+### Local Development
+
 1. Install dependencies:
 
    ```bash
@@ -114,3 +116,18 @@ The AI players use a simple strategy:
 3. Open `http://localhost:3000` in your browser
 
 4. Enjoy learning IPA through gameplay!
+
+### Deployment to Render
+
+This game is configured for easy deployment to Render.com:
+
+1. **Push your code to GitHub** (if not already done)
+2. **Sign up for Render** at [render.com](https://render.com)
+3. **Create a new Web Service** and connect your GitHub repository
+4. **Configure the service**:
+   - **Build Command**: `npm install`
+   - **Start Command**: `npm start`
+   - **Environment**: Node
+5. **Deploy!** Render will automatically deploy your app and provide a URL
+
+The game will be available at your Render URL and will automatically update when you push changes to GitHub.
